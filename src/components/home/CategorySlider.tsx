@@ -5,8 +5,9 @@ interface Category {
   id: string;
   name: string;
   icon: string;
-  image?: string;
 }
+
+const STORAGE_URL = "https://discountpanel.shop/storage/category-icons";
 
 const API_ROOT = "https://discountpanel.shop/api";
 
@@ -71,12 +72,16 @@ export const CategorySlider = () => {
             className="flex flex-col items-center gap-2"
           >
             <div 
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm bg-secondary overflow-hidden"
+              className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm bg-secondary overflow-hidden p-3"
             >
-              {category.image ? (
-                <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
+              {category.icon ? (
+                <img 
+                  src={`${STORAGE_URL}/${category.icon}`} 
+                  alt={category.name} 
+                  className="w-full h-full object-contain" 
+                />
               ) : (
-                <span>{category.icon || "📦"}</span>
+                <span className="text-2xl">📦</span>
               )}
             </div>
             <span className="text-xs font-medium text-foreground text-center line-clamp-1">
