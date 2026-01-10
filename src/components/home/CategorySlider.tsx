@@ -44,13 +44,13 @@ export const CategorySlider = () => {
 
   if (loading) {
     return (
-      <div className="px-4 py-4">
-        <h2 className="text-lg font-bold text-foreground mb-4">Popular Categories</h2>
-        <div className="grid grid-cols-4 gap-3">
+      <div className="py-4">
+        <h2 className="text-lg font-bold text-foreground mb-4 px-4">Popular Categories</h2>
+        <div className="flex gap-4 overflow-x-auto px-4 scrollbar-hide">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div className="w-14 h-14 rounded-2xl bg-secondary animate-pulse" />
-              <div className="w-12 h-3 bg-secondary rounded animate-pulse" />
+            <div key={i} className="flex flex-col items-center gap-2 flex-shrink-0">
+              <div className="w-16 h-16 rounded-2xl bg-secondary animate-pulse" />
+              <div className="w-14 h-3 bg-secondary rounded animate-pulse" />
             </div>
           ))}
         </div>
@@ -59,20 +59,20 @@ export const CategorySlider = () => {
   }
 
   return (
-    <div className="px-4 py-4">
-      <h2 className="text-lg font-bold text-foreground mb-4">Popular Categories</h2>
-      <div className="grid grid-cols-4 gap-3">
+    <div className="py-4">
+      <h2 className="text-lg font-bold text-foreground mb-4 px-4">Popular Categories</h2>
+      <div className="flex gap-4 overflow-x-auto px-4 scrollbar-hide">
         {categories.map((category, index) => (
           <motion.button
             key={category.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
             whileTap={{ scale: 0.95 }}
-            className="flex flex-col items-center gap-2"
+            className="flex flex-col items-center gap-2 flex-shrink-0"
           >
             <div 
-              className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-sm bg-secondary overflow-hidden p-3"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-sm bg-secondary overflow-hidden p-3"
             >
               {category.icon ? (
                 <img 
@@ -84,7 +84,7 @@ export const CategorySlider = () => {
                 <span className="text-2xl">📦</span>
               )}
             </div>
-            <span className="text-xs font-medium text-foreground text-center line-clamp-1">
+            <span className="text-xs font-medium text-foreground text-center line-clamp-1 w-16">
               {category.name}
             </span>
           </motion.button>
