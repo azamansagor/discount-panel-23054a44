@@ -2,6 +2,29 @@ import { motion } from "framer-motion";
 import { Star, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 
+interface Discount {
+  id: number;
+  title: string;
+  discount_type: string;
+  amount: string;
+}
+
+interface ApiProduct {
+  id: number;
+  name: string;
+  slug: string;
+  price: string;
+  featured_image: string;
+  average_rating: number;
+  discounts: Discount[];
+}
+
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data: ApiProduct[];
+}
+
 interface Product {
   id: string;
   name: string;
@@ -28,7 +51,27 @@ const fetchProducts = async (): Promise<Product[]> => {
     throw new Error("Failed to fetch products");
   }
 
-  return response.json();
+  const result: ApiResponse = await response.json();
+  
+  return result.data.map((item) => {
+    const discount = item.discounts.length > 0 
+      ? parseFloat(item.discounts[0].amount) 
+      : 0;
+    const price = parseFloat(item.price);
+    const originalPrice = discount > 0 
+      ? price / (1 - discount / 100) 
+      : price;
+
+    return {
+      id: String(item.id),
+      name: item.name,
+      image: item.featured_image,
+      price,
+      originalPrice: Math.round(originalPrice * 100) / 100,
+      rating: item.average_rating || 0,
+      discount: Math.round(discount),
+    };
+  });
 };
 
 export const FeaturedProducts = () => {
