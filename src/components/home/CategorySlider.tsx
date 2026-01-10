@@ -5,24 +5,29 @@ interface Category {
   id: string;
   name: string;
   icon: string;
-  color: string;
+  image?: string;
 }
 
-// Mock API call - replace with actual API
+const API_ROOT = "https://discountpanel.shop/api";
+
 const fetchCategories = async (): Promise<Category[]> => {
-  // Simulating API delay
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  
-  return [
-    { id: "1", name: "Electronics", icon: "💻", color: "hsl(239 84% 67%)" },
-    { id: "2", name: "Fashion", icon: "👗", color: "hsl(330 81% 60%)" },
-    { id: "3", name: "Food", icon: "🍔", color: "hsl(24 95% 53%)" },
-    { id: "4", name: "Beauty", icon: "💄", color: "hsl(340 82% 52%)" },
-    { id: "5", name: "Home", icon: "🏠", color: "hsl(142 71% 45%)" },
-    { id: "6", name: "Sports", icon: "⚽", color: "hsl(217 91% 60%)" },
-    { id: "7", name: "Travel", icon: "✈️", color: "hsl(198 93% 60%)" },
-    { id: "8", name: "Books", icon: "📚", color: "hsl(38 92% 50%)" },
-  ];
+  const response = await fetch(`${API_ROOT}/categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      per_page: 10,
+      page: 1,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch categories");
+  }
+
+  const data = await response.json();
+  return data.data || data;
 };
 
 export const CategorySlider = () => {
@@ -66,10 +71,13 @@ export const CategorySlider = () => {
             className="flex flex-col items-center gap-2"
           >
             <div 
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm"
-              style={{ backgroundColor: `${category.color}20` }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm bg-secondary overflow-hidden"
             >
-              {category.icon}
+              {category.image ? (
+                <img src={category.image} alt={category.name} className="w-full h-full object-cover" />
+              ) : (
+                <span>{category.icon || "📦"}</span>
+              )}
             </div>
             <span className="text-xs font-medium text-foreground text-center line-clamp-1">
               {category.name}
