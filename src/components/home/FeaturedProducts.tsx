@@ -12,66 +12,23 @@ interface Product {
   discount: number;
 }
 
-// Mock API call - replace with actual API
 const fetchProducts = async (): Promise<Product[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 600));
-  
-  return [
-    {
-      id: "1",
-      name: "Wireless Earbuds Pro",
-      image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=200&h=200&fit=crop",
-      price: 79.99,
-      originalPrice: 129.99,
-      rating: 4.8,
-      discount: 38,
+  const response = await fetch("/products/featured", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-    {
-      id: "2",
-      name: "Smart Watch Series 5",
-      image: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=200&h=200&fit=crop",
-      price: 199.99,
-      originalPrice: 299.99,
-      rating: 4.6,
-      discount: 33,
-    },
-    {
-      id: "3",
-      name: "Premium Sneakers",
-      image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&h=200&fit=crop",
-      price: 89.99,
-      originalPrice: 149.99,
-      rating: 4.9,
-      discount: 40,
-    },
-    {
-      id: "4",
-      name: "Leather Backpack",
-      image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200&h=200&fit=crop",
-      price: 59.99,
-      originalPrice: 99.99,
-      rating: 4.7,
-      discount: 40,
-    },
-    {
-      id: "5",
-      name: "Portable Speaker",
-      image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=200&h=200&fit=crop",
-      price: 49.99,
-      originalPrice: 79.99,
-      rating: 4.5,
-      discount: 37,
-    },
-    {
-      id: "6",
-      name: "Coffee Maker",
-      image: "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=200&h=200&fit=crop",
-      price: 119.99,
-      originalPrice: 179.99,
-      rating: 4.4,
-      discount: 33,
-    },
-  ];
+    body: JSON.stringify({
+      per_page: 5,
+      page: 1,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch products");
+  }
+
+  return response.json();
 };
 
 export const FeaturedProducts = () => {
