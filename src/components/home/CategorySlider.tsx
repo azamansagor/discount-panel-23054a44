@@ -7,7 +7,7 @@ interface Category {
   icon: string;
 }
 
-const STORAGE_URL = "https://discountpanel.shop/storage/category-icons";
+const STORAGE_URL = "https://discountpanel.shop/storage";
 
 const API_ROOT = "https://discountpanel.shop/api";
 
