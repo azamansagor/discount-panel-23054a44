@@ -134,12 +134,14 @@ export const FeaturedProducts = () => {
                   alt={product.name}
                   className="w-full h-32 object-cover"
                 />
-                {/* Discount badge */}
-                <div className="absolute top-2 left-2 px-2 py-1 gradient-accent rounded-lg">
-                  <span className="text-xs font-bold text-accent-foreground">
-                    -{product.discount}%
-                  </span>
-                </div>
+                {/* Discount badge - only show if discount > 0 */}
+                {product.discount > 0 && (
+                  <div className="absolute top-2 left-2 px-2 py-1 gradient-accent rounded-lg">
+                    <span className="text-xs font-bold text-accent-foreground">
+                      -{product.discount}%
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Content */}
