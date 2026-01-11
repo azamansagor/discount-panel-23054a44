@@ -35,8 +35,10 @@ interface Product {
   discount: number;
 }
 
+const API_ROOT = "https://discountpanel.shop/api";
+
 const fetchProducts = async (): Promise<Product[]> => {
-  const response = await fetch("/products/featured", {
+  const response = await fetch(`${API_ROOT}/products/featured`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
