@@ -132,9 +132,12 @@ export const FeaturedProducts = () => {
               {/* Image */}
               <div className="relative">
                 <img
-                  src={product.image}
+                  src={product.image || "/placeholder.svg"}
                   alt={product.name}
                   className="w-full h-32 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
                 />
                 {/* Discount badge - only show if discount > 0 */}
                 {product.discount > 0 && (
