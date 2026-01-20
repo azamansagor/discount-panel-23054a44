@@ -110,9 +110,12 @@ export const FeaturedStores = () => {
           >
             {/* Store Image */}
             <img
-              src={store.image}
+              src={store.image || "/placeholder.svg"}
               alt={store.name}
               className="w-16 h-16 rounded-xl object-cover"
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.svg";
+              }}
             />
 
             {/* Store Info */}
