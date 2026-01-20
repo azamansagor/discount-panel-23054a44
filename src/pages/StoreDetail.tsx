@@ -507,17 +507,17 @@ export default function StoreDetail() {
                 className="flex gap-3 p-3 bg-card rounded-xl shadow-sm border border-border/50"
               >
                 {/* Product Image with Discount Ribbon */}
-                <div className="relative w-20 h-20 flex-shrink-0">
+                <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">
                   <img
                     src={getImageUrl(product.featured_image)}
                     alt={product.name}
-                    className="w-full h-full object-cover rounded-lg"
+                    className="w-full h-full object-cover"
                     onError={(e) => {
                       e.currentTarget.src = "/placeholder.svg";
                     }}
                   />
                   {calculateDiscount(product) > 0 && (
-                    <div className="absolute top-0 left-0 bg-destructive text-destructive-foreground text-xs font-bold px-1.5 py-0.5 rounded-tl-lg rounded-br-lg">
+                    <div className="absolute -left-6 top-2 bg-destructive text-destructive-foreground text-[10px] font-bold py-0.5 px-6 -rotate-45 shadow-sm">
                       -{calculateDiscount(product)}%
                     </div>
                   )}
