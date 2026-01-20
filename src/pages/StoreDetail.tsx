@@ -34,6 +34,12 @@ interface StoreCategory {
   slug: string;
 }
 
+interface SocialContact {
+  id: number;
+  type: string;
+  value: string;
+}
+
 interface StoreDetails {
   id: number;
   name: string;
@@ -47,9 +53,7 @@ interface StoreDetails {
   average_rating: number;
   reviews_count: number;
   open_hours?: string;
-  facebook?: string;
-  instagram?: string;
-  twitter?: string;
+  social_contacts?: SocialContact[];
   website?: string;
   products?: Product[];
 }
@@ -59,7 +63,8 @@ interface Product {
   name: string;
   price: string;
   featured_image: string;
-  discounts: { amount: string }[];
+  discounts?: { amount: string }[];
+  discountPercent?: number;
 }
 
 interface Review {
@@ -85,6 +90,7 @@ export default function StoreDetail() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
   const productsObserverRef = useRef<HTMLDivElement>(null);
+  const productDiscountCacheRef = useRef<Map<number, number>>(new Map());
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -102,7 +108,24 @@ export default function StoreDetail() {
         const response = await fetch(`${API_ROOT}/stores/${storeId}`);
         if (!response.ok) throw new Error("Failed to fetch store");
         const data = await response.json();
-        setStore(data.data || data);
+        const raw = data.data || data;
+        const images: StoreImage[] = Array.isArray(raw.images)
+          ? raw.images
+          : Array.isArray(raw.gallery_images)
+            ? raw.gallery_images
+                .filter(Boolean)
+                .map((url: string, idx: number) => ({ id: idx, image: url }))
+            : [];
+
+        setStore({
+          ...raw,
+          images,
+          reviews_count: raw.reviews_count ?? raw.review_count ?? 0,
+          address: raw.address ?? raw.location_name ?? "",
+          phone: raw.phone ?? "",
+          social_contacts: raw.social_contacts ?? [],
+          website: raw.website ?? undefined,
+        });
       } catch (error) {
         console.error("Error fetching store:", error);
       } finally {
@@ -129,11 +152,49 @@ export default function StoreDetail() {
       const startIndex = (page - 1) * 10;
       const endIndex = startIndex + 10;
       const newProducts = allProducts.slice(startIndex, endIndex);
+
+      const normalizedProducts: Product[] = newProducts.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        featured_image: p.featured_image,
+        discounts: p.discounts,
+        discountPercent: p.discountPercent,
+      }));
+
+      // Enrich with discount percentage from /products/{id} (store endpoint doesn't include discounts)
+      const enrichedProducts: Product[] = await Promise.all(
+        normalizedProducts.map(async (p) => {
+          const cached = productDiscountCacheRef.current.get(p.id);
+          if (typeof cached === "number") return { ...p, discountPercent: cached };
+
+          try {
+            const pr = await fetch(`${API_ROOT}/products/${p.id}`);
+            if (!pr.ok) return p;
+            const pd = await pr.json();
+            const productData = pd.data || pd;
+
+            const discountRaw = productData?.discounts?.[0]?.amount;
+            const discountPercent = discountRaw
+              ? Math.round(parseFloat(String(discountRaw)))
+              : 0;
+
+            productDiscountCacheRef.current.set(p.id, discountPercent);
+            return {
+              ...p,
+              discounts: productData?.discounts ?? p.discounts,
+              discountPercent,
+            };
+          } catch {
+            return p;
+          }
+        })
+      );
       
       if (reset) {
-        setProducts(newProducts);
+        setProducts(enrichedProducts);
       } else {
-        setProducts((prev) => [...prev, ...newProducts]);
+        setProducts((prev) => [...prev, ...enrichedProducts]);
       }
 
       setHasMoreProducts(endIndex < allProducts.length);
@@ -255,8 +316,10 @@ export default function StoreDetail() {
   };
 
   const calculateDiscount = (product: Product) => {
-    if (!product.discounts?.length) return 0;
-    return Math.round(parseFloat(product.discounts[0].amount));
+    const raw =
+      product.discountPercent ??
+      (product.discounts?.length ? parseFloat(product.discounts[0].amount) : 0);
+    return Number.isFinite(raw) ? Math.round(raw) : 0;
   };
 
   if (loading) {
@@ -447,53 +510,70 @@ export default function StoreDetail() {
           )}
 
           {/* Social Contacts */}
-          {(store.facebook || store.instagram || store.twitter || store.website) && (
-            <div className="space-y-2">
-              <h3 className="font-semibold text-foreground">Connect With Us</h3>
-              <div className="flex items-center gap-3">
-                {store.facebook && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={() => window.open(store.facebook, "_blank")}
-                  >
-                    <Facebook className="h-4 w-4" />
-                  </Button>
-                )}
-                {store.instagram && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={() => window.open(store.instagram, "_blank")}
-                  >
-                    <Instagram className="h-4 w-4" />
-                  </Button>
-                )}
-                {store.twitter && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={() => window.open(store.twitter, "_blank")}
-                  >
-                    <Twitter className="h-4 w-4" />
-                  </Button>
-                )}
-                {store.website && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="rounded-full"
-                    onClick={() => window.open(store.website, "_blank")}
-                  >
-                    <Globe className="h-4 w-4" />
-                  </Button>
-                )}
+          {(() => {
+            const contacts = store.social_contacts ?? [];
+            const facebookUrl = contacts.find((c) =>
+              c.type?.toLowerCase().includes("facebook")
+            )?.value;
+            const instagramUrl = contacts.find((c) =>
+              c.type?.toLowerCase().includes("instagram")
+            )?.value;
+            const twitterUrl = contacts.find((c) => {
+              const t = c.type?.toLowerCase();
+              return t.includes("twitter") || t.includes("x.com") || t === "x";
+            })?.value;
+            const websiteUrl = store.website;
+
+            if (!facebookUrl && !instagramUrl && !twitterUrl && !websiteUrl) return null;
+
+            return (
+              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground">Connect With Us</h3>
+                <div className="flex items-center gap-3">
+                  {facebookUrl && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => window.open(facebookUrl, "_blank")}
+                    >
+                      <Facebook className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {instagramUrl && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => window.open(instagramUrl, "_blank")}
+                    >
+                      <Instagram className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {twitterUrl && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => window.open(twitterUrl, "_blank")}
+                    >
+                      <Twitter className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {websiteUrl && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="rounded-full"
+                      onClick={() => window.open(websiteUrl, "_blank")}
+                    >
+                      <Globe className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </TabsContent>
 
         {/* Products Tab */}
