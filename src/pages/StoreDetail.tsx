@@ -14,6 +14,7 @@ import {
   Instagram,
   Twitter,
   Globe,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -91,6 +92,8 @@ export default function StoreDetail() {
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
   const productsObserverRef = useRef<HTMLDivElement>(null);
   const productDiscountCacheRef = useRef<Map<number, number>>(new Map());
+  const productsFetchedRef = useRef(false);
+  const allProductsRef = useRef<any[]>([]);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -98,8 +101,14 @@ export default function StoreDetail() {
   const [loadingReviews, setLoadingReviews] = useState(false);
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
   const reviewsObserverRef = useRef<HTMLDivElement>(null);
+  const reviewsFetchedRef = useRef(false);
+  const allReviewsRef = useRef<any[]>([]);
 
   const [activeTab, setActiveTab] = useState("details");
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Fetch store details
   useEffect(() => {
@@ -136,116 +145,149 @@ export default function StoreDetail() {
     if (storeId) fetchStore();
   }, [storeId]);
 
-  // Fetch products from store endpoint
-  const fetchProducts = useCallback(async (page: number, reset = false) => {
-    if (loadingProducts || (!hasMoreProducts && !reset)) return;
+  // Fetch all products once and paginate locally
+  const fetchAllProducts = useCallback(async (forceRefresh = false) => {
+    if (productsFetchedRef.current && !forceRefresh) return;
+    if (loadingProducts) return;
 
     setLoadingProducts(true);
+    productsFetchedRef.current = true;
+
     try {
       const response = await fetch(`${API_ROOT}/stores/${storeId}`);
-
       if (!response.ok) throw new Error("Failed to fetch products");
       const data = await response.json();
       const storeData = data.data || data;
 
-      const allProducts = storeData.products || [];
-      const startIndex = (page - 1) * 10;
-      const endIndex = startIndex + 10;
-      const newProducts = allProducts.slice(startIndex, endIndex);
+      allProductsRef.current = storeData.products || [];
 
-      const normalizedProducts: Product[] = newProducts.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        featured_image: p.featured_image,
-        discounts: p.discounts,
-        discountPercent: p.discountPercent,
-      }));
+      // Load first page
+      const firstPage = allProductsRef.current.slice(0, 10);
+      const enrichedProducts = await enrichProductsWithDiscounts(firstPage);
 
-      // Enrich with discount percentage from /products/{id} (store endpoint doesn't include discounts)
-      const enrichedProducts: Product[] = await Promise.all(
-        normalizedProducts.map(async (p) => {
-          const cached = productDiscountCacheRef.current.get(p.id);
-          if (typeof cached === "number") return { ...p, discountPercent: cached };
-
-          try {
-            const pr = await fetch(`${API_ROOT}/products/${p.id}`);
-            if (!pr.ok) return p;
-            const pd = await pr.json();
-            const productData = pd.data || pd;
-
-            const discountRaw = productData?.discounts?.[0]?.amount;
-            const discountPercent = discountRaw
-              ? Math.round(parseFloat(String(discountRaw)))
-              : 0;
-
-            productDiscountCacheRef.current.set(p.id, discountPercent);
-            return {
-              ...p,
-              discounts: productData?.discounts ?? p.discounts,
-              discountPercent,
-            };
-          } catch {
-            return p;
-          }
-        })
-      );
-      
-      if (reset) {
-        setProducts(enrichedProducts);
-      } else {
-        setProducts((prev) => [...prev, ...enrichedProducts]);
-      }
-
-      setHasMoreProducts(endIndex < allProducts.length);
-      setProductsPage(page);
+      setProducts(enrichedProducts);
+      setProductsPage(1);
+      setHasMoreProducts(allProductsRef.current.length > 10);
     } catch (error) {
       console.error("Error fetching products:", error);
+      productsFetchedRef.current = false;
     } finally {
       setLoadingProducts(false);
     }
-  }, [storeId, loadingProducts, hasMoreProducts]);
+  }, [storeId]);
 
-  // Fetch reviews
-  const fetchReviews = useCallback(async (page: number, reset = false) => {
-    if (loadingReviews || (!hasMoreReviews && !reset)) return;
+  // Load more products from cached data
+  const loadMoreProducts = useCallback(async () => {
+    if (loadingProducts || !hasMoreProducts) return;
+
+    setLoadingProducts(true);
+    const nextPage = productsPage + 1;
+    const startIndex = (nextPage - 1) * 10;
+    const endIndex = startIndex + 10;
+    const nextProducts = allProductsRef.current.slice(startIndex, endIndex);
+
+    const enrichedProducts = await enrichProductsWithDiscounts(nextProducts);
+
+    setProducts((prev) => [...prev, ...enrichedProducts]);
+    setProductsPage(nextPage);
+    setHasMoreProducts(endIndex < allProductsRef.current.length);
+    setLoadingProducts(false);
+  }, [productsPage, hasMoreProducts, loadingProducts]);
+
+  // Enrich products with discount info
+  const enrichProductsWithDiscounts = async (productsList: any[]): Promise<Product[]> => {
+    const normalized: Product[] = productsList.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      featured_image: p.featured_image,
+      discounts: p.discounts,
+      discountPercent: p.discountPercent,
+    }));
+
+    return Promise.all(
+      normalized.map(async (p) => {
+        const cached = productDiscountCacheRef.current.get(p.id);
+        if (typeof cached === "number") return { ...p, discountPercent: cached };
+
+        try {
+          const pr = await fetch(`${API_ROOT}/products/${p.id}`);
+          if (!pr.ok) return p;
+          const pd = await pr.json();
+          const productData = pd.data || pd;
+
+          const discountRaw = productData?.discounts?.[0]?.amount;
+          const discountPercent = discountRaw
+            ? Math.round(parseFloat(String(discountRaw)))
+            : 0;
+
+          productDiscountCacheRef.current.set(p.id, discountPercent);
+          return {
+            ...p,
+            discounts: productData?.discounts ?? p.discounts,
+            discountPercent,
+          };
+        } catch {
+          return p;
+        }
+      })
+    );
+  };
+
+  // Fetch all reviews once and paginate locally
+  const fetchAllReviews = useCallback(async (forceRefresh = false) => {
+    if (reviewsFetchedRef.current && !forceRefresh) return;
+    if (loadingReviews) return;
 
     setLoadingReviews(true);
+    reviewsFetchedRef.current = true;
+
     try {
       const response = await fetch(`${API_ROOT}/stores/${storeId}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ per_page: 5, page }),
+        body: JSON.stringify({ per_page: 100, page: 1 }),
       });
 
       if (!response.ok) throw new Error("Failed to fetch reviews");
       const data = await response.json();
 
-      const newReviews = data.data || data.items || [];
-      
-      if (reset) {
-        setReviews(newReviews);
-      } else {
-        setReviews((prev) => [...prev, ...newReviews]);
-      }
+      allReviewsRef.current = data.data || data.items || [];
+      const firstPage = allReviewsRef.current.slice(0, 5);
 
-      setHasMoreReviews(newReviews.length === 5);
-      setReviewsPage(page);
+      setReviews(firstPage);
+      setReviewsPage(1);
+      setHasMoreReviews(allReviewsRef.current.length > 5);
     } catch (error) {
       console.error("Error fetching reviews:", error);
+      reviewsFetchedRef.current = false;
     } finally {
       setLoadingReviews(false);
     }
-  }, [storeId, loadingReviews, hasMoreReviews]);
+  }, [storeId]);
 
-  // Load initial data when tab changes
+  // Load more reviews from cached data
+  const loadMoreReviews = useCallback(() => {
+    if (loadingReviews || !hasMoreReviews) return;
+
+    const nextPage = reviewsPage + 1;
+    const startIndex = (nextPage - 1) * 5;
+    const endIndex = startIndex + 5;
+    const nextReviews = allReviewsRef.current.slice(startIndex, endIndex);
+
+    setReviews((prev) => [...prev, ...nextReviews]);
+    setReviewsPage(nextPage);
+    setHasMoreReviews(endIndex < allReviewsRef.current.length);
+  }, [reviewsPage, hasMoreReviews, loadingReviews]);
+
+  // Load initial data when tab changes (only once)
   useEffect(() => {
-    if (activeTab === "products" && products.length === 0) {
-      fetchProducts(1, true);
-    } else if (activeTab === "reviews" && reviews.length === 0) {
-      fetchReviews(1, true);
+    if (activeTab === "products" && !productsFetchedRef.current) {
+      fetchAllProducts();
+    } else if (activeTab === "reviews" && !reviewsFetchedRef.current) {
+      fetchAllReviews();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchAllProducts, fetchAllReviews]);
 
   // Infinite scroll for products
   useEffect(() => {
@@ -254,7 +296,7 @@ export default function StoreDetail() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMoreProducts && !loadingProducts) {
-          fetchProducts(productsPage + 1);
+          loadMoreProducts();
         }
       },
       { threshold: 0.1 }
@@ -266,7 +308,7 @@ export default function StoreDetail() {
     return () => {
       if (target) observer.unobserve(target);
     };
-  }, [activeTab, hasMoreProducts, loadingProducts, productsPage, fetchProducts]);
+  }, [activeTab, hasMoreProducts, loadingProducts, loadMoreProducts]);
 
   // Infinite scroll for reviews
   useEffect(() => {
@@ -275,7 +317,7 @@ export default function StoreDetail() {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMoreReviews && !loadingReviews) {
-          fetchReviews(reviewsPage + 1);
+          loadMoreReviews();
         }
       },
       { threshold: 0.1 }
@@ -287,7 +329,58 @@ export default function StoreDetail() {
     return () => {
       if (target) observer.unobserve(target);
     };
-  }, [activeTab, hasMoreReviews, loadingReviews, reviewsPage, fetchReviews]);
+  }, [activeTab, hasMoreReviews, loadingReviews, loadMoreReviews]);
+
+  // Pull to refresh handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const container = containerRef.current;
+    if (container && container.scrollTop === 0) {
+      touchStartRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const container = containerRef.current;
+    if (!container || container.scrollTop > 0) return;
+
+    const touchY = e.touches[0].clientY;
+    const diff = touchY - touchStartRef.current;
+
+    if (diff > 0 && touchStartRef.current > 0) {
+      setPullDistance(Math.min(diff * 0.5, 80));
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistance > 60) {
+      setRefreshing(true);
+
+      // Reset and refetch
+      productsFetchedRef.current = false;
+      reviewsFetchedRef.current = false;
+      productDiscountCacheRef.current.clear();
+      allProductsRef.current = [];
+      allReviewsRef.current = [];
+
+      setProducts([]);
+      setReviews([]);
+      setProductsPage(1);
+      setReviewsPage(1);
+      setHasMoreProducts(true);
+      setHasMoreReviews(true);
+
+      if (activeTab === "products") {
+        await fetchAllProducts(true);
+      } else if (activeTab === "reviews") {
+        await fetchAllReviews(true);
+      }
+
+      setRefreshing(false);
+    }
+
+    setPullDistance(0);
+    touchStartRef.current = 0;
+  };
 
   // Image slider functions
   const allImages = store
@@ -346,6 +439,23 @@ export default function StoreDetail() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      {/* Pull to refresh indicator */}
+      {(activeTab === "products" || activeTab === "reviews") && (
+        <div
+          className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center transition-all duration-200 pointer-events-none"
+          style={{
+            height: pullDistance > 0 || refreshing ? `${Math.max(pullDistance, refreshing ? 50 : 0)}px` : 0,
+            opacity: pullDistance > 20 || refreshing ? 1 : 0,
+          }}
+        >
+          <RefreshCw
+            className={`h-6 w-6 text-primary ${refreshing ? "animate-spin" : ""}`}
+            style={{
+              transform: `rotate(${pullDistance * 3}deg)`,
+            }}
+          />
+        </div>
+      )}
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
         <Button
@@ -577,8 +687,15 @@ export default function StoreDetail() {
         </TabsContent>
 
         {/* Products Tab */}
-        <TabsContent value="products" className="p-4 mt-0">
-          <div className="space-y-3">
+        <TabsContent value="products" className="mt-0">
+          <div
+            ref={activeTab === "products" ? containerRef : undefined}
+            className="p-4 space-y-3 overflow-auto"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ transform: `translateY(${pullDistance}px)` }}
+          >
             {products.map((product) => (
               <motion.div
                 key={product.id}
@@ -642,8 +759,15 @@ export default function StoreDetail() {
         </TabsContent>
 
         {/* Reviews Tab */}
-        <TabsContent value="reviews" className="p-4 mt-0">
-          <div className="space-y-4">
+        <TabsContent value="reviews" className="mt-0">
+          <div
+            ref={activeTab === "reviews" ? containerRef : undefined}
+            className="p-4 space-y-4 overflow-auto"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{ transform: `translateY(${pullDistance}px)` }}
+          >
             {reviews.map((review) => (
               <motion.div
                 key={review.id}
