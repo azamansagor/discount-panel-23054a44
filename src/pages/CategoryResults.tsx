@@ -248,8 +248,9 @@ const CategoryResults = () => {
                     onClick={() => {
                       if (item.type === "store") {
                         navigate(`/store/${item.id}`);
+                      } else {
+                        navigate(`/product/${item.id}`);
                       }
-                      // TODO: Add product detail navigation
                     }}
                   >
                     View {item.type === "store" ? "Store" : "Product"}
