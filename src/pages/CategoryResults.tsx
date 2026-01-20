@@ -245,6 +245,12 @@ const CategoryResults = () => {
                     variant="outline"
                     size="sm"
                     className="w-full text-xs"
+                    onClick={() => {
+                      if (item.type === "store") {
+                        navigate(`/store/${item.id}`);
+                      }
+                      // TODO: Add product detail navigation
+                    }}
                   >
                     View {item.type === "store" ? "Store" : "Product"}
                   </Button>
