@@ -10,6 +10,10 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  Facebook,
+  Instagram,
+  Twitter,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +47,11 @@ interface StoreDetails {
   average_rating: number;
   reviews_count: number;
   open_hours?: string;
+  facebook?: string;
+  instagram?: string;
+  twitter?: string;
+  website?: string;
+  products?: Product[];
 }
 
 interface Product {
@@ -104,22 +113,22 @@ export default function StoreDetail() {
     if (storeId) fetchStore();
   }, [storeId]);
 
-  // Fetch products
+  // Fetch products from store endpoint
   const fetchProducts = useCallback(async (page: number, reset = false) => {
     if (loadingProducts || (!hasMoreProducts && !reset)) return;
 
     setLoadingProducts(true);
     try {
-      const response = await fetch(`${API_ROOT}/stores/${storeId}/products`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ per_page: 10, page }),
-      });
+      const response = await fetch(`${API_ROOT}/stores/${storeId}`);
 
       if (!response.ok) throw new Error("Failed to fetch products");
       const data = await response.json();
+      const storeData = data.data || data;
 
-      const newProducts = data.data || data.items || [];
+      const allProducts = storeData.products || [];
+      const startIndex = (page - 1) * 10;
+      const endIndex = startIndex + 10;
+      const newProducts = allProducts.slice(startIndex, endIndex);
       
       if (reset) {
         setProducts(newProducts);
@@ -127,7 +136,7 @@ export default function StoreDetail() {
         setProducts((prev) => [...prev, ...newProducts]);
       }
 
-      setHasMoreProducts(newProducts.length === 10);
+      setHasMoreProducts(endIndex < allProducts.length);
       setProductsPage(page);
     } catch (error) {
       console.error("Error fetching products:", error);
@@ -434,6 +443,55 @@ export default function StoreDetail() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4 flex-shrink-0" />
               <span>{store.open_hours}</span>
+            </div>
+          )}
+
+          {/* Social Contacts */}
+          {(store.facebook || store.instagram || store.twitter || store.website) && (
+            <div className="space-y-2">
+              <h3 className="font-semibold text-foreground">Connect With Us</h3>
+              <div className="flex items-center gap-3">
+                {store.facebook && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(store.facebook, "_blank")}
+                  >
+                    <Facebook className="h-4 w-4" />
+                  </Button>
+                )}
+                {store.instagram && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(store.instagram, "_blank")}
+                  >
+                    <Instagram className="h-4 w-4" />
+                  </Button>
+                )}
+                {store.twitter && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(store.twitter, "_blank")}
+                  >
+                    <Twitter className="h-4 w-4" />
+                  </Button>
+                )}
+                {store.website && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(store.website, "_blank")}
+                  >
+                    <Globe className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           )}
         </TabsContent>
