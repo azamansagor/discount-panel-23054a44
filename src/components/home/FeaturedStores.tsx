@@ -2,6 +2,20 @@ import { motion } from "framer-motion";
 import { MapPin, ChevronRight, Navigation } from "lucide-react";
 import { useEffect, useState } from "react";
 
+interface ApiStore {
+  id: number;
+  name: string;
+  slug: string;
+  banner_image: string;
+  address?: string;
+  categories?: { id: number; name: string; slug: string }[];
+}
+
+interface ApiResponse {
+  success: boolean;
+  data: ApiStore[];
+}
+
 interface Store {
   id: string;
   name: string;
@@ -11,60 +25,34 @@ interface Store {
   distance: string;
 }
 
-// Mock API call - replace with actual API
+const API_ROOT = "https://discountpanel.shop/api";
+
 const fetchStores = async (): Promise<Store[]> => {
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  
-  return [
-    {
-      id: "1",
-      name: "TechZone Electronics",
-      image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=100&h=100&fit=crop",
-      category: "Electronics",
-      location: "123 Market Street",
-      distance: "0.5 km",
+  const response = await fetch(`${API_ROOT}/stores`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
-    {
-      id: "2",
-      name: "Fashion Forward",
-      image: "https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?w=100&h=100&fit=crop",
-      category: "Fashion",
-      location: "456 Style Avenue",
-      distance: "1.2 km",
-    },
-    {
-      id: "3",
-      name: "Gourmet Kitchen",
-      image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop",
-      category: "Food & Dining",
-      location: "789 Culinary Lane",
-      distance: "0.8 km",
-    },
-    {
-      id: "4",
-      name: "Beauty Palace",
-      image: "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=100&h=100&fit=crop",
-      category: "Beauty",
-      location: "321 Glamour Road",
-      distance: "1.5 km",
-    },
-    {
-      id: "5",
-      name: "Sports Hub",
-      image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=100&h=100&fit=crop",
-      category: "Sports & Fitness",
-      location: "555 Athletic Blvd",
-      distance: "2.0 km",
-    },
-    {
-      id: "6",
-      name: "Home & Living",
-      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=100&h=100&fit=crop",
-      category: "Home Decor",
-      location: "888 Cozy Street",
-      distance: "1.8 km",
-    },
-  ];
+    body: JSON.stringify({
+      per_page: 6,
+      page: 1,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch stores");
+  }
+
+  const result: ApiResponse = await response.json();
+
+  return result.data.map((store) => ({
+    id: String(store.id),
+    name: store.name,
+    image: store.banner_image,
+    category: store.categories?.[0]?.name || "General",
+    location: store.address || "Location not available",
+    distance: "Nearby",
+  }));
 };
 
 export const FeaturedStores = () => {
