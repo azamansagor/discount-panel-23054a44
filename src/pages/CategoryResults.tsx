@@ -17,7 +17,7 @@ interface ResultItem {
 }
 
 interface ApiResponse {
-  data: any[];
+  items: any[];
   current_page: number;
   last_page: number;
   total: number;
@@ -67,12 +67,12 @@ const CategoryResults = () => {
 
       const data: ApiResponse = await response.json();
       
-      const mappedItems: ResultItem[] = (data.data || []).map((item: any) => ({
+      const mappedItems: ResultItem[] = (data.items || []).map((item: any) => ({
         id: item.id,
         name: item.name || item.title,
         image: item.featured_image || item.banner_image || item.image || null,
         category: item.categories?.[0]?.name || item.category || "Uncategorized",
-        type: item.featured_image ? "product" : "store",
+        type: item.type || (item.featured_image ? "product" : "store"),
       }));
 
       if (reset) {
