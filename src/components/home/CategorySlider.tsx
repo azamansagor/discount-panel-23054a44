@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Category {
   id: string;
@@ -34,6 +35,7 @@ const fetchCategories = async (): Promise<Category[]> => {
 export const CategorySlider = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchCategories().then((data) => {
@@ -41,6 +43,10 @@ export const CategorySlider = () => {
       setLoading(false);
     });
   }, []);
+
+  const handleCategoryClick = (category: Category) => {
+    navigate(`/category/${category.id}/${encodeURIComponent(category.name)}`);
+  };
 
   if (loading) {
     return (
@@ -69,6 +75,7 @@ export const CategorySlider = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => handleCategoryClick(category)}
             className="flex flex-col items-center gap-2 w-[calc(25%-6px)] flex-shrink-0 snap-start"
           >
             <div 
