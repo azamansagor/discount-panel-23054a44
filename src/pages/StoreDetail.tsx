@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import DOMPurify from "dompurify";
 import {
   ArrowLeft,
   Heart,
@@ -605,9 +606,12 @@ export default function StoreDetail() {
           {store.description && (
             <div className="space-y-2">
               <h3 className="font-semibold text-foreground">About</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {store.description}
-              </p>
+              <div
+                className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(store.description),
+                }}
+              />
             </div>
           )}
 
