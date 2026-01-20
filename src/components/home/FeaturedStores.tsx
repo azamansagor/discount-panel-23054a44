@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { MapPin, ChevronRight, Navigation } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface ApiStore {
   id: number;
@@ -58,6 +59,7 @@ const fetchStores = async (): Promise<Store[]> => {
 export const FeaturedStores = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchStores().then((data) => {
@@ -106,7 +108,8 @@ export const FeaturedStores = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             whileTap={{ scale: 0.98 }}
-            className="flex gap-3 p-3 bg-card rounded-2xl shadow-sm border border-border/50"
+            onClick={() => navigate(`/store/${store.id}`)}
+            className="flex gap-3 p-3 bg-card rounded-2xl shadow-sm border border-border/50 cursor-pointer"
           >
             {/* Store Image */}
             <img
