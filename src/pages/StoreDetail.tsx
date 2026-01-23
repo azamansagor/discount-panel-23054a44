@@ -705,7 +705,8 @@ export default function StoreDetail() {
                 key={product.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex gap-3 p-3 bg-card rounded-xl shadow-sm border border-border/50"
+                className="flex gap-3 p-3 bg-card rounded-xl shadow-sm border border-border/50 cursor-pointer active:bg-secondary/50 transition-colors"
+                onClick={() => navigate(`/product/${product.id}`)}
               >
                 {/* Product Image with Discount Ribbon */}
                 <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">

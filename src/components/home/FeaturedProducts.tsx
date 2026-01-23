@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Star, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Discount {
   id: number;
@@ -77,6 +78,7 @@ const fetchProducts = async (): Promise<Product[]> => {
 };
 
 export const FeaturedProducts = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -127,7 +129,8 @@ export const FeaturedProducts = () => {
           >
             <motion.div
               whileTap={{ scale: 0.98 }}
-              className="bg-card rounded-2xl overflow-hidden shadow-card"
+              className="bg-card rounded-2xl overflow-hidden shadow-card cursor-pointer"
+              onClick={() => navigate(`/product/${product.id}`)}
             >
               {/* Image */}
               <div className="relative">
