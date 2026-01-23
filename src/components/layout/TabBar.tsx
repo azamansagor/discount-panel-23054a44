@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Home, MapPin, User } from "lucide-react";
+import { Home, LayoutGrid, Heart, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface TabItem {
@@ -10,8 +10,9 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   { path: "/home", label: "Home", icon: Home },
-  { path: "/location", label: "Location", icon: MapPin },
-  { path: "/profile", label: "Profile", icon: User },
+  { path: "/discover", label: "Discover", icon: LayoutGrid },
+  { path: "/wishlist", label: "Wishlist", icon: Heart },
+  { path: "/profile", label: "Account", icon: User },
 ];
 
 export const TabBar = () => {
@@ -34,7 +35,7 @@ export const TabBar = () => {
               {isActive && (
                 <motion.div
                   layoutId="tab-indicator"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 gradient-primary rounded-b-full"
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 bg-primary rounded-b-full"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
@@ -43,13 +44,14 @@ export const TabBar = () => {
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <Icon
-                  className={`w-6 h-6 transition-colors ${
+                  className={`w-5 h-5 transition-colors ${
                     isActive ? "text-primary" : "text-muted-foreground"
                   }`}
+                  fill={isActive ? "currentColor" : "none"}
                 />
               </motion.div>
               <span
-                className={`text-xs mt-1 font-medium transition-colors ${
+                className={`text-[10px] mt-1 font-medium transition-colors ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >

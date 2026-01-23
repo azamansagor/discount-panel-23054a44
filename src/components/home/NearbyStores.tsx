@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MapPin, ChevronRight, Navigation } from "lucide-react";
+import { MapPin, Clock, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,7 +23,7 @@ interface Store {
   image: string;
   category: string;
   location: string;
-  distance: string;
+  price: string;
 }
 
 const API_ROOT = "https://discountpanel.shop/api";
@@ -35,7 +35,7 @@ const fetchStores = async (): Promise<Store[]> => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      per_page: 6,
+      per_page: 4,
       page: 1,
     }),
   });
@@ -52,11 +52,11 @@ const fetchStores = async (): Promise<Store[]> => {
     image: store.banner_image,
     category: store.categories?.[0]?.name || "General",
     location: store.address || "Location not available",
-    distance: "Nearby",
+    price: "$" + (Math.floor(Math.random() * 3000) + 500) + "/Monthly",
   }));
 };
 
-export const FeaturedStores = () => {
+export const NearbyStores = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -70,17 +70,17 @@ export const FeaturedStores = () => {
 
   if (loading) {
     return (
-      <div className="px-4 py-4 pb-24">
+      <div className="px-4 py-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-foreground">Featured Stores</h2>
+          <h2 className="text-lg font-bold text-foreground">Near By Locations</h2>
         </div>
         <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="flex gap-3 p-3 bg-card rounded-2xl">
-              <div className="w-16 h-16 bg-secondary rounded-xl animate-pulse" />
-              <div className="flex-1">
-                <div className="w-3/4 h-4 bg-secondary rounded animate-pulse mb-2" />
-                <div className="w-1/2 h-3 bg-secondary rounded animate-pulse mb-2" />
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="flex gap-3 p-3 bg-card rounded-2xl border border-border">
+              <div className="w-20 h-20 bg-secondary rounded-xl animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="w-3/4 h-4 bg-secondary rounded animate-pulse" />
+                <div className="w-1/2 h-3 bg-secondary rounded animate-pulse" />
                 <div className="w-2/3 h-3 bg-secondary rounded animate-pulse" />
               </div>
             </div>
@@ -91,11 +91,11 @@ export const FeaturedStores = () => {
   }
 
   return (
-    <div className="px-4 py-4 pb-24">
+    <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-foreground">Featured Stores</h2>
+        <h2 className="text-lg font-bold text-foreground">Near By Locations</h2>
         <button className="flex items-center gap-1 text-primary font-medium text-sm">
-          View All
+          See all
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
@@ -109,38 +109,36 @@ export const FeaturedStores = () => {
             transition={{ delay: index * 0.1 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate(`/store/${store.id}`)}
-            className="flex gap-3 p-3 bg-card rounded-2xl shadow-sm border border-border/50 cursor-pointer"
+            className="flex gap-3 p-3 bg-card rounded-2xl border border-border shadow-sm cursor-pointer"
           >
             {/* Store Image */}
-            <img
-              src={store.image || "/placeholder.svg"}
-              alt={store.name}
-              className="w-16 h-16 rounded-xl object-cover"
-              onError={(e) => {
-                e.currentTarget.src = "/placeholder.svg";
-              }}
-            />
-
-            {/* Store Info */}
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-foreground truncate">
-                {store.name}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-1">
-                {store.category}
-              </p>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="truncate">{store.location}</span>
-                <span className="text-primary font-medium">• {store.distance}</span>
-              </div>
+            <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
+              <img
+                src={store.image || "/placeholder.svg"}
+                alt={store.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg";
+                }}
+              />
             </div>
 
-            {/* View Location Button */}
-            <button className="self-center flex items-center gap-1 px-3 py-2 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors">
-              <Navigation className="w-4 h-4" />
-              <span className="hidden sm:inline">View</span>
-            </button>
+            {/* Store Info */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center">
+              <h3 className="font-semibold text-foreground text-sm mb-1 truncate">
+                {store.name}
+              </h3>
+              
+              <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                <MapPin className="w-3 h-3 flex-shrink-0" />
+                <span className="text-xs truncate">{store.location}</span>
+              </div>
+              
+              <div className="flex items-center gap-1 text-primary">
+                <Clock className="w-3 h-3" />
+                <span className="text-xs font-semibold">{store.price}</span>
+              </div>
+            </div>
           </motion.div>
         ))}
       </div>
@@ -148,4 +146,4 @@ export const FeaturedStores = () => {
   );
 };
 
-export default FeaturedStores;
+export default NearbyStores;
