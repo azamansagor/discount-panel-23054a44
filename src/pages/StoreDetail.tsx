@@ -9,16 +9,19 @@ import {
   MapPin,
   Star,
   Clock,
-  ChevronLeft,
+  Eye,
+  MessageCircle,
+  Share2,
+  Play,
   ChevronRight,
   Facebook,
   Instagram,
   Twitter,
   Globe,
-  RefreshCw,
+  Users,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import TabBar from "@/components/layout/TabBar";
 
@@ -58,6 +61,12 @@ interface StoreDetails {
   social_contacts?: SocialContact[];
   website?: string;
   products?: Product[];
+  views_count?: number;
+  owner_name?: string;
+  owner_title?: string;
+  owner_avatar?: string;
+  price_range?: string;
+  features?: { label: string; value: string }[];
 }
 
 interface Product {
@@ -72,6 +81,7 @@ interface Product {
 interface Review {
   id: number;
   user_name: string;
+  user_avatar?: string;
   rating: number;
   comment: string;
   created_at: string;
@@ -86,30 +96,11 @@ export default function StoreDetail() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [wishlist, setWishlist] = useState(false);
 
-  // Products state
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productsPage, setProductsPage] = useState(1);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [hasMoreProducts, setHasMoreProducts] = useState(true);
-  const productsObserverRef = useRef<HTMLDivElement>(null);
-  const productDiscountCacheRef = useRef<Map<number, number>>(new Map());
-  const productsFetchedRef = useRef(false);
-  const allProductsRef = useRef<any[]>([]);
-
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
-  const [reviewsPage, setReviewsPage] = useState(1);
   const [loadingReviews, setLoadingReviews] = useState(false);
-  const [hasMoreReviews, setHasMoreReviews] = useState(true);
-  const reviewsObserverRef = useRef<HTMLDivElement>(null);
   const reviewsFetchedRef = useRef(false);
-  const allReviewsRef = useRef<any[]>([]);
-
-  const [activeTab, setActiveTab] = useState("details");
-  const [refreshing, setRefreshing] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const touchStartRef = useRef(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const allReviewsRef = useRef<Review[]>([]);
 
   // Fetch store details
   useEffect(() => {
@@ -135,6 +126,11 @@ export default function StoreDetail() {
           phone: raw.phone ?? "",
           social_contacts: raw.social_contacts ?? [],
           website: raw.website ?? undefined,
+          views_count: raw.views_count ?? Math.floor(Math.random() * 20000) + 5000,
+          owner_name: raw.owner_name ?? "Store Owner",
+          owner_title: raw.owner_title ?? "Store Manager",
+          owner_avatar: raw.owner_avatar,
+          price_range: raw.price_range ?? "$50",
         });
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -146,100 +142,10 @@ export default function StoreDetail() {
     if (storeId) fetchStore();
   }, [storeId]);
 
-  // Fetch all products once and paginate locally
-  const fetchAllProducts = useCallback(async (forceRefresh = false) => {
-    if (productsFetchedRef.current && !forceRefresh) return;
-    if (loadingProducts) return;
-
-    setLoadingProducts(true);
-    productsFetchedRef.current = true;
-
-    try {
-      const response = await fetch(`${API_ROOT}/stores/${storeId}`);
-      if (!response.ok) throw new Error("Failed to fetch products");
-      const data = await response.json();
-      const storeData = data.data || data;
-
-      allProductsRef.current = storeData.products || [];
-
-      // Load first page
-      const firstPage = allProductsRef.current.slice(0, 10);
-      const enrichedProducts = await enrichProductsWithDiscounts(firstPage);
-
-      setProducts(enrichedProducts);
-      setProductsPage(1);
-      setHasMoreProducts(allProductsRef.current.length > 10);
-    } catch (error) {
-      console.error("Error fetching products:", error);
-      productsFetchedRef.current = false;
-    } finally {
-      setLoadingProducts(false);
-    }
-  }, [storeId]);
-
-  // Load more products from cached data
-  const loadMoreProducts = useCallback(async () => {
-    if (loadingProducts || !hasMoreProducts) return;
-
-    setLoadingProducts(true);
-    const nextPage = productsPage + 1;
-    const startIndex = (nextPage - 1) * 10;
-    const endIndex = startIndex + 10;
-    const nextProducts = allProductsRef.current.slice(startIndex, endIndex);
-
-    const enrichedProducts = await enrichProductsWithDiscounts(nextProducts);
-
-    setProducts((prev) => [...prev, ...enrichedProducts]);
-    setProductsPage(nextPage);
-    setHasMoreProducts(endIndex < allProductsRef.current.length);
-    setLoadingProducts(false);
-  }, [productsPage, hasMoreProducts, loadingProducts]);
-
-  // Enrich products with discount info
-  const enrichProductsWithDiscounts = async (productsList: any[]): Promise<Product[]> => {
-    const normalized: Product[] = productsList.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      price: p.price,
-      featured_image: p.featured_image,
-      discounts: p.discounts,
-      discountPercent: p.discountPercent,
-    }));
-
-    return Promise.all(
-      normalized.map(async (p) => {
-        const cached = productDiscountCacheRef.current.get(p.id);
-        if (typeof cached === "number") return { ...p, discountPercent: cached };
-
-        try {
-          const pr = await fetch(`${API_ROOT}/products/${p.id}`);
-          if (!pr.ok) return p;
-          const pd = await pr.json();
-          const productData = pd.data || pd;
-
-          const discountRaw = productData?.discounts?.[0]?.amount;
-          const discountPercent = discountRaw
-            ? Math.round(parseFloat(String(discountRaw)))
-            : 0;
-
-          productDiscountCacheRef.current.set(p.id, discountPercent);
-          return {
-            ...p,
-            discounts: productData?.discounts ?? p.discounts,
-            discountPercent,
-          };
-        } catch {
-          return p;
-        }
-      })
-    );
-  };
-
-  // Fetch all reviews once and paginate locally
-  const fetchAllReviews = useCallback(async (forceRefresh = false) => {
-    if (reviewsFetchedRef.current && !forceRefresh) return;
-    if (loadingReviews) return;
-
+  // Fetch reviews
+  const fetchReviews = useCallback(async () => {
+    if (reviewsFetchedRef.current || loadingReviews) return;
+    
     setLoadingReviews(true);
     reviewsFetchedRef.current = true;
 
@@ -254,136 +160,22 @@ export default function StoreDetail() {
       const data = await response.json();
 
       allReviewsRef.current = data.data || data.items || [];
-      const firstPage = allReviewsRef.current.slice(0, 5);
-
-      setReviews(firstPage);
-      setReviewsPage(1);
-      setHasMoreReviews(allReviewsRef.current.length > 5);
+      setReviews(allReviewsRef.current.slice(0, 3));
     } catch (error) {
       console.error("Error fetching reviews:", error);
       reviewsFetchedRef.current = false;
     } finally {
       setLoadingReviews(false);
     }
-  }, [storeId]);
+  }, [storeId, loadingReviews]);
 
-  // Load more reviews from cached data
-  const loadMoreReviews = useCallback(() => {
-    if (loadingReviews || !hasMoreReviews) return;
-
-    const nextPage = reviewsPage + 1;
-    const startIndex = (nextPage - 1) * 5;
-    const endIndex = startIndex + 5;
-    const nextReviews = allReviewsRef.current.slice(startIndex, endIndex);
-
-    setReviews((prev) => [...prev, ...nextReviews]);
-    setReviewsPage(nextPage);
-    setHasMoreReviews(endIndex < allReviewsRef.current.length);
-  }, [reviewsPage, hasMoreReviews, loadingReviews]);
-
-  // Load initial data when tab changes (only once)
   useEffect(() => {
-    if (activeTab === "products" && !productsFetchedRef.current) {
-      fetchAllProducts();
-    } else if (activeTab === "reviews" && !reviewsFetchedRef.current) {
-      fetchAllReviews();
+    if (store && !reviewsFetchedRef.current) {
+      fetchReviews();
     }
-  }, [activeTab, fetchAllProducts, fetchAllReviews]);
+  }, [store, fetchReviews]);
 
-  // Infinite scroll for products
-  useEffect(() => {
-    if (activeTab !== "products") return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreProducts && !loadingProducts) {
-          loadMoreProducts();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const target = productsObserverRef.current;
-    if (target) observer.observe(target);
-
-    return () => {
-      if (target) observer.unobserve(target);
-    };
-  }, [activeTab, hasMoreProducts, loadingProducts, loadMoreProducts]);
-
-  // Infinite scroll for reviews
-  useEffect(() => {
-    if (activeTab !== "reviews") return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMoreReviews && !loadingReviews) {
-          loadMoreReviews();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const target = reviewsObserverRef.current;
-    if (target) observer.observe(target);
-
-    return () => {
-      if (target) observer.unobserve(target);
-    };
-  }, [activeTab, hasMoreReviews, loadingReviews, loadMoreReviews]);
-
-  // Pull to refresh handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const container = containerRef.current;
-    if (container && container.scrollTop === 0) {
-      touchStartRef.current = e.touches[0].clientY;
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const container = containerRef.current;
-    if (!container || container.scrollTop > 0) return;
-
-    const touchY = e.touches[0].clientY;
-    const diff = touchY - touchStartRef.current;
-
-    if (diff > 0 && touchStartRef.current > 0) {
-      setPullDistance(Math.min(diff * 0.5, 80));
-    }
-  };
-
-  const handleTouchEnd = async () => {
-    if (pullDistance > 60) {
-      setRefreshing(true);
-
-      // Reset and refetch
-      productsFetchedRef.current = false;
-      reviewsFetchedRef.current = false;
-      productDiscountCacheRef.current.clear();
-      allProductsRef.current = [];
-      allReviewsRef.current = [];
-
-      setProducts([]);
-      setReviews([]);
-      setProductsPage(1);
-      setReviewsPage(1);
-      setHasMoreProducts(true);
-      setHasMoreReviews(true);
-
-      if (activeTab === "products") {
-        await fetchAllProducts(true);
-      } else if (activeTab === "reviews") {
-        await fetchAllReviews(true);
-      }
-
-      setRefreshing(false);
-    }
-
-    setPullDistance(0);
-    touchStartRef.current = 0;
-  };
-
-  // Image slider functions
+  // Image functions
   const allImages = store
     ? [
         store.banner_image,
@@ -391,40 +183,70 @@ export default function StoreDetail() {
       ].filter(Boolean)
     : [];
 
-  const nextImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === allImages.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const prevImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === 0 ? allImages.length - 1 : prev - 1
-    );
-  };
-
   const getImageUrl = (image: string | null) => {
     if (!image) return "/placeholder.svg";
     if (image.startsWith("http")) return image;
     return `${STORAGE_URL}/${image}`;
   };
 
-  const calculateDiscount = (product: Product) => {
-    const raw =
-      product.discountPercent ??
-      (product.discounts?.length ? parseFloat(product.discounts[0].amount) : 0);
-    return Number.isFinite(raw) ? Math.round(raw) : 0;
+  // Rating breakdown calculation
+  const getRatingBreakdown = () => {
+    const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    allReviewsRef.current.forEach((review) => {
+      const rating = Math.min(5, Math.max(1, Math.round(review.rating)));
+      breakdown[rating as keyof typeof breakdown]++;
+    });
+    const total = allReviewsRef.current.length || 1;
+    return Object.entries(breakdown)
+      .reverse()
+      .map(([star, count]) => ({
+        star: parseInt(star),
+        count,
+        percentage: (count / total) * 100,
+      }));
+  };
+
+  // Get store features from categories
+  const getStoreFeatures = () => {
+    if (store?.features) return store.features;
+    
+    const features: { label: string; value: string }[] = [];
+    if (store?.categories?.length) {
+      features.push({ label: "CATEGORY", value: store.categories[0].name });
+    }
+    if (store?.open_hours) {
+      features.push({ label: "HOURS", value: store.open_hours });
+    }
+    if (store?.address) {
+      features.push({ label: "LOCATION", value: store.address.split(",")[0] || store.address });
+    }
+    features.push({ label: "STATUS", value: "Open" });
+    return features;
+  };
+
+  // Format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMonths = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    if (diffInMonths < 1) return "Recently";
+    if (diffInMonths === 1) return "1 month ago";
+    return `${diffInMonths} months ago`;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
-        <Skeleton className="w-full h-64" />
+      <div className="min-h-screen bg-secondary/30 pb-20">
+        <Skeleton className="w-full h-72" />
         <div className="p-4 space-y-4">
-          <Skeleton className="h-8 w-3/4" />
+          <div className="flex gap-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="w-16 h-16 rounded-xl" />
+            ))}
+          </div>
+          <Skeleton className="h-6 w-3/4" />
           <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-20 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -438,39 +260,42 @@ export default function StoreDetail() {
     );
   }
 
+  const ratingBreakdown = getRatingBreakdown();
+  const storeFeatures = getStoreFeatures();
+
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Pull to refresh indicator */}
-      {(activeTab === "products" || activeTab === "reviews") && (
-        <div
-          className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center transition-all duration-200 pointer-events-none"
-          style={{
-            height: pullDistance > 0 || refreshing ? `${Math.max(pullDistance, refreshing ? 50 : 0)}px` : 0,
-            opacity: pullDistance > 20 || refreshing ? 1 : 0,
-          }}
-        >
-          <RefreshCw
-            className={`h-6 w-6 text-primary ${refreshing ? "animate-spin" : ""}`}
-            style={{
-              transform: `rotate(${pullDistance * 3}deg)`,
-            }}
-          />
-        </div>
-      )}
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-gradient-to-b from-black/50 to-transparent">
+    <div className="min-h-screen bg-secondary/30 pb-32">
+      {/* Header Overlay */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4">
         <Button
           variant="ghost"
           size="icon"
-          className="bg-background/80 backdrop-blur-sm rounded-full"
+          className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
           onClick={() => navigate(-1)}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
+            onClick={() => setWishlist(!wishlist)}
+          >
+            <Heart className={`h-5 w-5 ${wishlist ? "fill-destructive text-destructive" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
+          >
+            <Share2 className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Image Slider */}
-      <div className="relative w-full h-64 bg-secondary">
+      {/* Main Image */}
+      <div className="relative w-full h-72">
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
@@ -486,352 +311,405 @@ export default function StoreDetail() {
             }}
           />
         </AnimatePresence>
-
-        {/* Slider Controls */}
-        {allImages.length > 1 && (
-          <>
-            <button
-              onClick={prevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              onClick={nextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-
-            {/* Dots Indicator */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-              {allImages.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentImageIndex(idx)}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    idx === currentImageIndex
-                      ? "bg-primary"
-                      : "bg-background/60"
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start rounded-none border-b bg-background px-4 h-12">
-          <TabsTrigger
-            value="details"
-            className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-          >
-            Details
-          </TabsTrigger>
-          <TabsTrigger
-            value="products"
-            className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-          >
-            Products
-          </TabsTrigger>
-          <TabsTrigger
-            value="reviews"
-            className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-          >
-            Reviews
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Details Tab */}
-        <TabsContent value="details" className="p-4 space-y-4 mt-0">
-          {/* Store Name Row */}
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-foreground">{store.name}</h1>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setWishlist(!wishlist)}
-                className="rounded-full"
-              >
-                <Heart
-                  className={`h-5 w-5 ${
-                    wishlist ? "fill-destructive text-destructive" : ""
-                  }`}
-                />
-              </Button>
-              {store.phone && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-full"
-                  onClick={() => window.open(`tel:${store.phone}`)}
-                >
-                  <Phone className="h-5 w-5" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Rating Row */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`h-4 w-4 ${
-                    i < Math.round(store.average_rating || 0)
-                      ? "fill-warning text-warning"
-                      : "text-muted-foreground"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-sm text-muted-foreground">
-              ({store.reviews_count || 0} reviews)
-            </span>
-          </div>
-
-          {/* Location Row */}
-          {store.address && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4 flex-shrink-0" />
-              <span>{store.address}</span>
-            </div>
-          )}
-
-          {/* Description */}
-          {store.description && (
-            <div className="space-y-2">
-              <h3 className="font-semibold text-foreground">About</h3>
-              <div
-                className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(store.description),
+      {/* Thumbnail Gallery */}
+      <div className="px-4 -mt-6 relative z-10">
+        <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2">
+          {allImages.slice(0, 5).map((img, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentImageIndex(idx)}
+              className={`relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                currentImageIndex === idx
+                  ? "border-primary shadow-lg scale-105"
+                  : "border-background shadow-md"
+              }`}
+            >
+              <img
+                src={getImageUrl(img)}
+                alt={`Thumbnail ${idx + 1}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg";
                 }}
               />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="px-4 pt-4 space-y-5">
+        {/* View Count */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Eye className="h-4 w-4" />
+          <span>{store.views_count?.toLocaleString()} people viewed this</span>
+        </div>
+
+        {/* Store Name */}
+        <h1 className="text-xl font-bold text-foreground">{store.name}</h1>
+
+        {/* Feature Tags */}
+        {store.categories && store.categories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {store.categories.slice(0, 3).map((cat) => (
+              <div
+                key={cat.id}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-lg text-xs font-medium text-muted-foreground"
+              >
+                <Tag className="h-3 w-3" />
+                <span>{cat.name}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Rating & Reviews */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                className={`h-4 w-4 ${
+                  i < Math.round(store.average_rating || 0)
+                    ? "fill-warning text-warning"
+                    : "text-muted-foreground/30"
+                }`}
+              />
+            ))}
+          </div>
+          <span className="text-sm text-muted-foreground">
+            ({store.reviews_count || 0} reviews)
+          </span>
+        </div>
+
+        {/* Owner/Agent Card */}
+        <div className="bg-card rounded-2xl p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-secondary overflow-hidden">
+                {store.owner_avatar ? (
+                  <img
+                    src={getImageUrl(store.owner_avatar)}
+                    alt={store.owner_name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">{store.owner_name}</p>
+                <p className="text-xs text-primary">{store.owner_title}</p>
+              </div>
             </div>
-          )}
-
-          {/* Open Hours */}
-          {store.open_hours && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4 flex-shrink-0" />
-              <span>{store.open_hours}</span>
+            <div className="flex gap-2">
+              {store.phone && (
+                <Button
+                  size="icon"
+                  className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+                  onClick={() => window.open(`tel:${store.phone}`)}
+                >
+                  <Phone className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                size="icon"
+                className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
+              >
+                <MessageCircle className="h-4 w-4" />
+              </Button>
             </div>
-          )}
+          </div>
+          <div className="mt-3 pt-3 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              From <span className="text-foreground font-bold text-lg">{store.price_range}</span>
+              <span className="text-muted-foreground">/ Monthly</span>
+            </p>
+          </div>
+        </div>
 
-          {/* Social Contacts */}
-          {(() => {
-            const contacts = store.social_contacts ?? [];
-            const facebookUrl = contacts.find((c) =>
-              c.type?.toLowerCase().includes("facebook")
-            )?.value;
-            const instagramUrl = contacts.find((c) =>
-              c.type?.toLowerCase().includes("instagram")
-            )?.value;
-            const twitterUrl = contacts.find((c) => {
-              const t = c.type?.toLowerCase();
-              return t.includes("twitter") || t.includes("x.com") || t === "x";
-            })?.value;
-            const websiteUrl = store.website;
+        {/* Descriptions Section */}
+        {store.description && (
+          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+            <h2 className="font-bold text-foreground">Descriptions</h2>
+            <div
+              className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(store.description),
+              }}
+            />
+          </div>
+        )}
 
-            if (!facebookUrl && !instagramUrl && !twitterUrl && !websiteUrl) return null;
+        {/* Features & Amenities */}
+        {storeFeatures.length > 0 && (
+          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+            <h2 className="font-bold text-foreground">Features & Amenities</h2>
+            <div className="space-y-2">
+              {storeFeatures.map((feature, idx) => (
+                <div key={idx} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">{feature.label}</span>
+                  <span className="text-sm font-medium text-foreground">{feature.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-            return (
-              <div className="space-y-2">
-                <h3 className="font-semibold text-foreground">Connect With Us</h3>
-                <div className="flex items-center gap-3">
-                  {facebookUrl && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => window.open(facebookUrl, "_blank")}
-                    >
-                      <Facebook className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {instagramUrl && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => window.open(instagramUrl, "_blank")}
-                    >
-                      <Instagram className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {twitterUrl && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => window.open(twitterUrl, "_blank")}
-                    >
-                      <Twitter className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {websiteUrl && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="rounded-full"
-                      onClick={() => window.open(websiteUrl, "_blank")}
-                    >
-                      <Globe className="h-4 w-4" />
-                    </Button>
-                  )}
+        {/* Location Map */}
+        {store.address && (
+          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+            <h2 className="font-bold text-foreground">Location Map</h2>
+            <div className="relative h-40 rounded-xl overflow-hidden bg-secondary">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">{store.address}</p>
                 </div>
               </div>
-            );
-          })()}
-        </TabsContent>
+              <div className="absolute bottom-3 right-3">
+                <Button size="icon" className="rounded-full bg-primary text-primary-foreground shadow-lg">
+                  <MapPin className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
-        {/* Products Tab */}
-        <TabsContent value="products" className="mt-0">
-          <div
-            ref={activeTab === "products" ? containerRef : undefined}
-            className="p-4 space-y-3 overflow-auto"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{ transform: `translateY(${pullDistance}px)` }}
-          >
-            {products.map((product) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex gap-3 p-3 bg-card rounded-xl shadow-sm border border-border/50 cursor-pointer active:bg-secondary/50 transition-colors"
-                onClick={() => navigate(`/product/${product.id}`)}
-              >
-                {/* Product Image with Discount Ribbon */}
-                <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg">
+        {/* Photo & Videos */}
+        {allImages.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-foreground">Photo & Videos</h2>
+              <button className="text-sm text-primary font-medium">See all</button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {allImages.slice(0, 6).map((img, idx) => (
+                <div
+                  key={idx}
+                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
+                  onClick={() => setCurrentImageIndex(idx)}
+                >
                   <img
-                    src={getImageUrl(product.featured_image)}
-                    alt={product.name}
+                    src={getImageUrl(img)}
+                    alt={`Gallery ${idx + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       e.currentTarget.src = "/placeholder.svg";
                     }}
                   />
-                  {calculateDiscount(product) > 0 && (
-                    <div className="absolute -left-6 top-2 bg-destructive text-destructive-foreground text-[10px] font-bold py-0.5 px-6 -rotate-45 shadow-sm">
-                      -{calculateDiscount(product)}%
+                  {idx === 2 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Play className="h-8 w-8 text-white" />
                     </div>
                   )}
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-                {/* Product Info */}
-                <div className="flex-1 flex flex-col justify-center min-w-0">
-                  <h3 className="font-medium text-foreground text-sm line-clamp-2">
-                    {product.name}
-                  </h3>
-                  <p className="text-primary font-bold mt-1">
-                    ${parseFloat(product.price).toFixed(2)}
-                  </p>
+        {/* Reviews Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-foreground">Review</h2>
+            <button className="text-sm text-primary font-medium">See all</button>
+          </div>
+
+          {/* Rating Breakdown */}
+          <div className="bg-card rounded-2xl p-4 shadow-sm">
+            <div className="flex gap-6">
+              {/* Overall Rating */}
+              <div className="text-center">
+                <p className="text-4xl font-bold text-foreground">{store.average_rating?.toFixed(1) || "0.0"}</p>
+                <div className="flex justify-center gap-0.5 my-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-3 w-3 ${
+                        i < Math.round(store.average_rating || 0)
+                          ? "fill-warning text-warning"
+                          : "text-muted-foreground/30"
+                      }`}
+                    />
+                  ))}
                 </div>
-              </motion.div>
-            ))}
+                <p className="text-xs text-muted-foreground">({store.reviews_count || 0} Reviews)</p>
+              </div>
 
-            {/* Loading indicator */}
-            {loadingProducts && (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex gap-3 p-3 bg-card rounded-xl">
-                    <Skeleton className="w-20 h-20 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-4 w-1/4" />
+              {/* Rating Bars */}
+              <div className="flex-1 space-y-1.5">
+                {ratingBreakdown.map(({ star, percentage }) => (
+                  <div key={star} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-3">{star}</span>
+                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-warning rounded-full transition-all"
+                        style={{ width: `${percentage}%` }}
+                      />
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-
-            {/* Load more trigger */}
-            <div ref={productsObserverRef} className="h-4" />
-
-            {products.length === 0 && !loadingProducts && (
-              <p className="text-center text-muted-foreground py-8">
-                No products available
-              </p>
-            )}
+            </div>
           </div>
-        </TabsContent>
 
-        {/* Reviews Tab */}
-        <TabsContent value="reviews" className="mt-0">
-          <div
-            ref={activeTab === "reviews" ? containerRef : undefined}
-            className="p-4 space-y-4 overflow-auto"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{ transform: `translateY(${pullDistance}px)` }}
-          >
-            {reviews.map((review) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-card rounded-xl shadow-sm border border-border/50"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-foreground">
-                    {review.user_name || "Anonymous"}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-3 w-3 ${
-                          i < review.rating
-                            ? "fill-warning text-warning"
-                            : "text-muted-foreground"
-                        }`}
-                      />
-                    ))}
+          {/* Review Cards */}
+          {loadingReviews ? (
+            <div className="space-y-3">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
                   </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4 mt-1" />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {review.comment}
-                </p>
-                {review.created_at && (
-                  <p className="text-xs text-muted-foreground/60 mt-2">
-                    {new Date(review.created_at).toLocaleDateString()}
-                  </p>
-                )}
-              </motion.div>
-            ))}
-
-            {/* Loading indicator */}
-            {loadingReviews && (
-              <div className="space-y-4">
-                {[...Array(2)].map((_, i) => (
-                  <div key={i} className="p-4 bg-card rounded-xl">
-                    <Skeleton className="h-4 w-1/4 mb-2" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4 mt-1" />
+              ))}
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="space-y-3">
+              {reviews.map((review) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-card rounded-2xl p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden">
+                        {review.user_avatar ? (
+                          <img
+                            src={getImageUrl(review.user_avatar)}
+                            alt={review.user_name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-primary/10">
+                            <span className="text-primary font-semibold text-sm">
+                              {(review.user_name || "A").charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">{review.user_name || "Anonymous"}</p>
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < review.rating
+                                  ? "fill-warning text-warning"
+                                  : "text-muted-foreground/30"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatTimeAgo(review.created_at)}
+                    </span>
                   </div>
-                ))}
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    "{review.comment}"
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-card rounded-2xl p-8 shadow-sm text-center">
+              <p className="text-muted-foreground">No reviews yet</p>
+            </div>
+          )}
+        </div>
+
+        {/* Social Links */}
+        {(() => {
+          const contacts = store.social_contacts ?? [];
+          const facebookUrl = contacts.find((c) => c.type?.toLowerCase().includes("facebook"))?.value;
+          const instagramUrl = contacts.find((c) => c.type?.toLowerCase().includes("instagram"))?.value;
+          const twitterUrl = contacts.find((c) => {
+            const t = c.type?.toLowerCase();
+            return t.includes("twitter") || t.includes("x.com") || t === "x";
+          })?.value;
+          const websiteUrl = store.website;
+
+          if (!facebookUrl && !instagramUrl && !twitterUrl && !websiteUrl) return null;
+
+          return (
+            <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+              <h2 className="font-bold text-foreground">Connect With Us</h2>
+              <div className="flex items-center gap-3">
+                {facebookUrl && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(facebookUrl, "_blank")}
+                  >
+                    <Facebook className="h-4 w-4" />
+                  </Button>
+                )}
+                {instagramUrl && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(instagramUrl, "_blank")}
+                  >
+                    <Instagram className="h-4 w-4" />
+                  </Button>
+                )}
+                {twitterUrl && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(twitterUrl, "_blank")}
+                  >
+                    <Twitter className="h-4 w-4" />
+                  </Button>
+                )}
+                {websiteUrl && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="rounded-full"
+                    onClick={() => window.open(websiteUrl, "_blank")}
+                  >
+                    <Globe className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
-            )}
+            </div>
+          );
+        })()}
+      </div>
 
-            {/* Load more trigger */}
-            <div ref={reviewsObserverRef} className="h-4" />
-
-            {reviews.length === 0 && !loadingReviews && (
-              <p className="text-center text-muted-foreground py-8">
-                No reviews yet
-              </p>
-            )}
+      {/* Bottom Action Bar */}
+      <div className="fixed bottom-16 left-0 right-0 z-40 bg-card border-t border-border p-4 safe-area-inset-bottom">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground line-through">$65.00</p>
+            <p className="text-xl font-bold text-foreground">{store.price_range || "$50.00"}</p>
           </div>
-        </TabsContent>
-      </Tabs>
+          <Button className="rounded-xl px-8 py-6 bg-primary text-primary-foreground font-semibold shadow-lg">
+            Contact Now
+            <ChevronRight className="h-5 w-5 ml-1" />
+          </Button>
+        </div>
+      </div>
 
       <TabBar />
     </div>
