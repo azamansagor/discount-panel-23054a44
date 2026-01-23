@@ -8,7 +8,6 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
-  ShoppingCart,
   Share2,
   RefreshCw,
   Store,
@@ -313,7 +312,7 @@ export default function ProductDetail() {
   return (
     <div 
       ref={scrollContainerRef}
-      className="min-h-screen bg-background pb-32 overflow-y-auto"
+      className="min-h-screen bg-background pb-20 overflow-y-auto"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -701,27 +700,6 @@ export default function ProductDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Fixed Bottom CTA */}
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-background/95 backdrop-blur-sm border-t border-border">
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-shrink-0"
-            onClick={() => setWishlist(!wishlist)}
-          >
-            <Heart
-              className={`h-5 w-5 ${
-                wishlist ? "fill-destructive text-destructive" : ""
-              }`}
-            />
-          </Button>
-          <Button className="flex-1 gap-2" size="lg">
-            <ShoppingCart className="h-5 w-5" />
-            Add to Cart
-          </Button>
-        </div>
-      </div>
 
       <TabBar />
     </div>
