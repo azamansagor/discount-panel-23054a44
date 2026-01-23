@@ -77,6 +77,10 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [wishlist, setWishlist] = useState(false);
+  
+  // Image swipe state
+  const imageSwipeStartRef = useRef(0);
+  const [imageSwipeOffset, setImageSwipeOffset] = useState(0);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -227,15 +231,43 @@ export default function ProductDetail() {
     : [];
 
   const nextImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === allImages.length - 1 ? 0 : prev + 1
-    );
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) =>
+        prev === allImages.length - 1 ? 0 : prev + 1
+      );
+    }
   };
 
   const prevImage = () => {
-    setCurrentImageIndex((prev) =>
-      prev === 0 ? allImages.length - 1 : prev - 1
-    );
+    if (allImages.length > 1) {
+      setCurrentImageIndex((prev) =>
+        prev === 0 ? allImages.length - 1 : prev - 1
+      );
+    }
+  };
+
+  // Image swipe handlers
+  const handleImageSwipeStart = (e: React.TouchEvent) => {
+    imageSwipeStartRef.current = e.touches[0].clientX;
+  };
+
+  const handleImageSwipeMove = (e: React.TouchEvent) => {
+    if (imageSwipeStartRef.current === 0 || allImages.length <= 1) return;
+    const currentX = e.touches[0].clientX;
+    const diff = currentX - imageSwipeStartRef.current;
+    setImageSwipeOffset(diff * 0.3);
+  };
+
+  const handleImageSwipeEnd = () => {
+    if (Math.abs(imageSwipeOffset) > 30) {
+      if (imageSwipeOffset > 0) {
+        prevImage();
+      } else {
+        nextImage();
+      }
+    }
+    setImageSwipeOffset(0);
+    imageSwipeStartRef.current = 0;
   };
 
   const getImageUrl = (image: string | null) => {
@@ -371,16 +403,22 @@ export default function ProductDetail() {
       </div>
 
       {/* Main Image */}
-      <div className="relative w-full h-80 bg-secondary">
+      <div 
+        className="relative w-full h-80 bg-secondary overflow-hidden"
+        onTouchStart={handleImageSwipeStart}
+        onTouchMove={handleImageSwipeMove}
+        onTouchEnd={handleImageSwipeEnd}
+      >
         <AnimatePresence mode="wait">
           <motion.img
             key={currentImageIndex}
             src={getImageUrl(allImages[currentImageIndex])}
             alt={product.name}
             className="w-full h-full object-cover"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            style={{ transform: `translateX(${imageSwipeOffset}px)` }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
             onError={(e) => {
               e.currentTarget.src = "/placeholder.svg";
