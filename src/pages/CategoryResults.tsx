@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Heart } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Heart, Search, MapPin, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import TabBar from "@/components/layout/TabBar";
 
 const API_ROOT = "https://discountpanel.shop/api";
@@ -11,9 +12,16 @@ const STORAGE_URL = "https://discountpanel.shop/storage";
 interface ResultItem {
   id: number;
   name: string;
-  image: string | null;
+  images: string[];
   category: string;
   type: "store" | "product";
+  location?: string;
+  price?: number;
+  originalPrice?: number;
+  discount?: number;
+  tags?: string[];
+  distance?: string;
+  deliveryTime?: string;
 }
 
 interface ApiResponse {
@@ -36,6 +44,8 @@ const CategoryResults = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [wishlist, setWishlist] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
   
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -67,13 +77,47 @@ const CategoryResults = () => {
 
       const data: ApiResponse = await response.json();
       
-      const mappedItems: ResultItem[] = (data.items || []).map((item: any) => ({
-        id: item.id,
-        name: item.name || item.title,
-        image: item.featured_image || item.banner_image || item.image || null,
-        category: item.categories?.[0]?.name || item.category || "Uncategorized",
-        type: item.type || (item.featured_image ? "product" : "store"),
-      }));
+      const mappedItems: ResultItem[] = (data.items || []).map((item: any) => {
+        // Extract all images
+        const images: string[] = [];
+        if (item.featured_image) images.push(item.featured_image);
+        if (item.banner_image && item.banner_image !== item.featured_image) images.push(item.banner_image);
+        if (item.images && Array.isArray(item.images)) {
+          item.images.forEach((img: any) => {
+            const imgPath = typeof img === 'string' ? img : img.path || img.image;
+            if (imgPath && !images.includes(imgPath)) images.push(imgPath);
+          });
+        }
+        if (images.length === 0) images.push('');
+
+        // Calculate price and discount
+        const price = parseFloat(item.price) || 0;
+        const discountAmount = item.discounts?.[0]?.amount ? parseFloat(item.discounts[0].amount) : 0;
+        const originalPrice = discountAmount > 0 ? price / (1 - discountAmount / 100) : price;
+
+        // Extract tags/features
+        const tags: string[] = [];
+        if (item.categories && Array.isArray(item.categories)) {
+          item.categories.slice(0, 3).forEach((cat: any) => {
+            if (cat.name) tags.push(cat.name);
+          });
+        }
+
+        return {
+          id: item.id,
+          name: item.name || item.title,
+          images,
+          category: item.categories?.[0]?.name || item.category || "Uncategorized",
+          type: item.type || (item.featured_image ? "product" : "store"),
+          location: item.location || item.address || "Location not specified",
+          price,
+          originalPrice: discountAmount > 0 ? originalPrice : undefined,
+          discount: discountAmount > 0 ? Math.round(discountAmount) : undefined,
+          tags,
+          distance: item.distance || "4.4 km",
+          deliveryTime: item.delivery_time || "25-30 mins",
+        };
+      });
 
       if (reset) {
         setItems(mappedItems);
@@ -91,14 +135,12 @@ const CategoryResults = () => {
     }
   }, [categoryId]);
 
-  // Initial fetch and filter change
   useEffect(() => {
     setPage(1);
     setHasMore(true);
     fetchItems(1, filter, true);
   }, [filter, fetchItems]);
 
-  // Infinite scroll observer
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -137,128 +179,206 @@ const CategoryResults = () => {
     });
   };
 
-  const filters: { label: string; value: FilterType }[] = [
-    { label: "All", value: "all" },
-    { label: "Stores", value: "store" },
-    { label: "Products", value: "product" },
-  ];
+  const handleImageDot = (itemKey: string, index: number) => {
+    setActiveImageIndex(prev => ({ ...prev, [itemKey]: index }));
+  };
+
+  const filteredItems = items.filter(item => 
+    searchQuery === "" || item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-secondary/30 pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background border-b border-border">
-        <div className="flex items-center gap-3 p-4">
+      <div className="sticky top-0 z-10 bg-background">
+        <div className="flex items-center gap-3 px-4 py-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="shrink-0"
+            className="shrink-0 -ml-2"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-lg font-semibold text-foreground truncate">
-            {categoryName ? decodeURIComponent(categoryName) : "Category"}
+          <h1 className="text-xl font-bold text-foreground">
+            {categoryName ? decodeURIComponent(categoryName) : "Search"}
           </h1>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 px-4 pb-3">
-          {filters.map((f) => (
-            <Button
-              key={f.value}
-              variant={filter === f.value ? "default" : "outline"}
-              size="sm"
-              onClick={() => setFilter(f.value)}
-              className="rounded-full"
-            >
-              {f.label}
-            </Button>
-          ))}
+        {/* Search Bar */}
+        <div className="px-4 pb-4">
+          <div className="relative">
+            <Input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-12 pl-4 pr-12 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground"
+            />
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          </div>
         </div>
       </div>
 
-      {/* Results Grid */}
-      <div className="p-4">
+      {/* Results Header */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <h2 className="text-lg font-bold text-foreground">Search Result</h2>
+        <button className="text-accent font-medium text-sm underline underline-offset-2">
+          Short by
+        </button>
+      </div>
+
+      {/* Results List */}
+      <div className="px-4 space-y-4">
         {loading ? (
-          <div className="grid grid-cols-2 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-card rounded-xl overflow-hidden shadow-sm">
-                <div className="aspect-square bg-secondary animate-pulse" />
-                <div className="p-3 space-y-2">
-                  <div className="h-4 bg-secondary rounded animate-pulse" />
-                  <div className="h-3 w-2/3 bg-secondary rounded animate-pulse" />
-                  <div className="h-8 bg-secondary rounded animate-pulse" />
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="bg-card rounded-2xl overflow-hidden shadow-md">
+                <div className="aspect-[16/10] bg-secondary animate-pulse" />
+                <div className="p-4 space-y-3">
+                  <div className="h-5 bg-secondary rounded animate-pulse w-3/4" />
+                  <div className="h-4 bg-secondary rounded animate-pulse w-1/2" />
+                  <div className="flex gap-2">
+                    <div className="h-8 bg-secondary rounded-lg animate-pulse w-24" />
+                    <div className="h-8 bg-secondary rounded-lg animate-pulse w-24" />
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-        ) : items.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No items found</p>
+        ) : filteredItems.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-secondary flex items-center justify-center">
+              <Search className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground font-medium">No items found</p>
+            <p className="text-sm text-muted-foreground mt-1">Try a different search term</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
-            {items.map((item, index) => (
-              <motion.div
-                key={`${item.type}-${item.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(index * 0.05, 0.3) }}
-                className="bg-card rounded-xl overflow-hidden shadow-sm border border-border"
-              >
-                {/* Image with Wishlist Button */}
-                <div className="relative aspect-square">
-                  <img
-                    src={item.image ? `${STORAGE_URL}/${item.image}` : "/placeholder.svg"}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder.svg";
-                    }}
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleWishlist(item.id, item.type);
-                    }}
-                    className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm flex items-center justify-center shadow-sm"
-                  >
-                    <Heart
-                      className={`h-4 w-4 transition-colors ${
-                        wishlist.has(`${item.type}-${item.id}`)
-                          ? "fill-destructive text-destructive"
-                          : "text-muted-foreground"
-                      }`}
+          <AnimatePresence mode="popLayout">
+            {filteredItems.map((item, index) => {
+              const itemKey = `${item.type}-${item.id}`;
+              const currentImageIndex = activeImageIndex[itemKey] || 0;
+              
+              return (
+                <motion.div
+                  key={itemKey}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: Math.min(index * 0.05, 0.2) }}
+                  className="bg-card rounded-2xl overflow-hidden shadow-md cursor-pointer"
+                  onClick={() => {
+                    if (item.type === "store") {
+                      navigate(`/store/${item.id}`);
+                    } else {
+                      navigate(`/product/${item.id}`);
+                    }
+                  }}
+                >
+                  {/* Image Section */}
+                  <div className="relative aspect-[16/10]">
+                    <img
+                      src={item.images[currentImageIndex] ? `${STORAGE_URL}/${item.images[currentImageIndex]}` : "/placeholder.svg"}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
                     />
-                  </button>
-                </div>
 
-                {/* Content */}
-                <div className="p-3 space-y-2">
-                  <h3 className="font-medium text-foreground text-sm line-clamp-2">
-                    {item.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground line-clamp-1">
-                    {item.category}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs"
-                    onClick={() => {
-                      if (item.type === "store") {
-                        navigate(`/store/${item.id}`);
-                      } else {
-                        navigate(`/product/${item.id}`);
-                      }
-                    }}
-                  >
-                    View {item.type === "store" ? "Store" : "Product"}
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                    {/* Discount Badge */}
+                    {item.discount && item.discount > 0 && (
+                      <div className="absolute top-4 left-4 bg-accent text-accent-foreground px-3 py-1.5 rounded-lg text-sm font-semibold shadow-lg">
+                        {item.discount}% OFF
+                      </div>
+                    )}
+
+                    {/* Wishlist Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist(item.id, item.type);
+                      }}
+                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                    >
+                      <Heart
+                        className={`h-5 w-5 transition-colors ${
+                          wishlist.has(itemKey)
+                            ? "fill-destructive text-destructive"
+                            : "text-white"
+                        }`}
+                      />
+                    </button>
+
+                    {/* Time & Distance Info */}
+                    <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium">
+                      <Clock className="h-4 w-4" />
+                      <span>{item.deliveryTime}</span>
+                      <span className="mx-1">.</span>
+                      <span>{item.distance}</span>
+                    </div>
+
+                    {/* Image Dots */}
+                    {item.images.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {item.images.slice(0, 5).map((_, idx) => (
+                          <button
+                            key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleImageDot(itemKey, idx);
+                            }}
+                            className={`w-2 h-2 rounded-full transition-all ${
+                              currentImageIndex === idx 
+                                ? "bg-white w-4" 
+                                : "bg-white/50"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="p-4">
+                    {/* Title */}
+                    <h3 className="font-bold text-foreground text-lg line-clamp-1 mb-1">
+                      {item.name}
+                    </h3>
+
+                    {/* Location & Price Row */}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                        <MapPin className="h-4 w-4" />
+                        <span className="line-clamp-1">{item.location}</span>
+                      </div>
+                      {item.price !== undefined && item.price > 0 && (
+                        <span className="text-accent font-bold text-lg">
+                          ${item.price.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Tags */}
+                    {item.tags && item.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.tags.map((tag, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-secondary rounded-lg text-xs font-medium text-muted-foreground"
+                          >
+                            <Tag className="h-3 w-3" />
+                            <span>{tag}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
 
         {/* Load More Trigger */}
