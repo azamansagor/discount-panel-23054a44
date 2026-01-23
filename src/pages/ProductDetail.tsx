@@ -89,6 +89,7 @@ export default function ProductDetail() {
   const [hasMoreReviews, setHasMoreReviews] = useState(true);
   const reviewsObserverRef = useRef<HTMLDivElement>(null);
   const reviewsFetchedRef = useRef(false);
+  const reviewsLoadingRef = useRef(false);
 
   const [activeTab, setActiveTab] = useState("details");
 
@@ -123,21 +124,29 @@ export default function ProductDetail() {
     }
   }, [productId, fetchProduct]);
 
-  // Fetch reviews
+  // Fetch reviews - fetch 10 at a time
   const fetchReviews = useCallback(async (page: number, reset = false) => {
-    if (loadingReviews || (!hasMoreReviews && !reset)) return;
+    // Use ref to prevent concurrent calls
+    if (reviewsLoadingRef.current) return;
+    if (!reset && !hasMoreReviews) return;
 
+    reviewsLoadingRef.current = true;
     setLoadingReviews(true);
+    
     try {
       const response = await fetch(`${API_ROOT}/products/${productId}/reviews`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ per_page: 5, page }),
+        body: JSON.stringify({ per_page: 10, page }),
       });
 
-      if (!response.ok) throw new Error("Failed to fetch reviews");
+      if (!response.ok) {
+        // Stop trying on error
+        setHasMoreReviews(false);
+        throw new Error("Failed to fetch reviews");
+      }
+      
       const data = await response.json();
-
       const newReviews = data.data || data.items || [];
       
       if (reset) {
@@ -146,15 +155,17 @@ export default function ProductDetail() {
         setReviews((prev) => [...prev, ...newReviews]);
       }
 
-      setHasMoreReviews(newReviews.length === 5);
+      setHasMoreReviews(newReviews.length === 10);
       setReviewsPage(page);
       reviewsFetchedRef.current = true;
     } catch (error) {
       console.error("Error fetching reviews:", error);
+      setHasMoreReviews(false); // Stop further attempts on error
     } finally {
       setLoadingReviews(false);
+      reviewsLoadingRef.current = false;
     }
-  }, [productId, loadingReviews, hasMoreReviews]);
+  }, [productId, hasMoreReviews]);
 
   // Load reviews when tab changes
   useEffect(() => {
@@ -163,14 +174,29 @@ export default function ProductDetail() {
     }
   }, [activeTab]);
 
-  // Infinite scroll for reviews
+  // Infinite scroll for reviews - use refs to avoid stale closures
+  const reviewsPageRef = useRef(reviewsPage);
+  const hasMoreReviewsRef = useRef(hasMoreReviews);
+  
+  useEffect(() => {
+    reviewsPageRef.current = reviewsPage;
+  }, [reviewsPage]);
+  
+  useEffect(() => {
+    hasMoreReviewsRef.current = hasMoreReviews;
+  }, [hasMoreReviews]);
+
   useEffect(() => {
     if (activeTab !== "reviews") return;
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMoreReviews && !loadingReviews) {
-          fetchReviews(reviewsPage + 1);
+        if (
+          entries[0].isIntersecting && 
+          hasMoreReviewsRef.current && 
+          !reviewsLoadingRef.current
+        ) {
+          fetchReviews(reviewsPageRef.current + 1);
         }
       },
       { threshold: 0.1 }
@@ -182,7 +208,7 @@ export default function ProductDetail() {
     return () => {
       if (target) observer.unobserve(target);
     };
-  }, [activeTab, hasMoreReviews, loadingReviews, reviewsPage, fetchReviews]);
+  }, [activeTab, fetchReviews]);
 
   // Pull to refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
