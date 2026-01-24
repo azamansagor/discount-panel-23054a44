@@ -6,6 +6,7 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import TabBar from "@/components/layout/TabBar";
 import { Skeleton } from "@/components/ui/skeleton";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
 const API_BASE_URL = 'https://discountpanel.shop/api';
 
@@ -16,6 +17,7 @@ interface ProductData {
   price?: string;
   featured_image?: string;
   banner_image?: string;
+  address?: string;
   store?: {
     id: number;
     name: string;
@@ -33,6 +35,11 @@ const Wishlist = () => {
   const { isAuthenticated } = useAuth();
   const [fetchedItems, setFetchedItems] = useState<Map<string, ProductData>>(new Map());
   const [fetchingIds, setFetchingIds] = useState<Set<string>>(new Set());
+  
+  // Remove confirmation drawer state
+  const [removeDrawerOpen, setRemoveDrawerOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<{ type: 'product' | 'store'; id: number; data: ProductData | null } | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -101,9 +108,27 @@ const Wishlist = () => {
     return null;
   };
 
-  const handleRemoveFromWishlist = async (e: React.MouseEvent, type: 'product' | 'store', itemId: number) => {
+  const handleRemoveClick = (e: React.MouseEvent, type: 'product' | 'store', itemId: number, itemData: ProductData | null) => {
     e.stopPropagation();
-    await toggleWishlist(type, itemId);
+    setItemToRemove({ type, id: itemId, data: itemData });
+    setRemoveDrawerOpen(true);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!itemToRemove) return;
+    
+    setIsRemoving(true);
+    await toggleWishlist(itemToRemove.type, itemToRemove.id);
+    setIsRemoving(false);
+    setRemoveDrawerOpen(false);
+    setItemToRemove(null);
+  };
+
+  const handleCloseDrawer = () => {
+    if (!isRemoving) {
+      setRemoveDrawerOpen(false);
+      setItemToRemove(null);
+    }
   };
 
   const displayItems = getAllDisplayItems();
@@ -243,7 +268,7 @@ const Wishlist = () => {
 
                     {/* Heart Button */}
                     <button
-                      onClick={(e) => handleRemoveFromWishlist(e, wishlistItem.type, wishlistItem.item_id)}
+                      onClick={(e) => handleRemoveClick(e, wishlistItem.type, wishlistItem.item_id, itemData || null)}
                       className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
                     >
                       <Heart className="w-4 h-4 text-destructive fill-destructive" />
@@ -305,6 +330,16 @@ const Wishlist = () => {
           </div>
         )}
       </div>
+
+      {/* Remove Confirmation Drawer */}
+      <RemoveWishlistDrawer
+        isOpen={removeDrawerOpen}
+        onClose={handleCloseDrawer}
+        onConfirm={handleConfirmRemove}
+        item={itemToRemove?.data || null}
+        type={itemToRemove?.type || 'product'}
+        isLoading={isRemoving}
+      />
 
       <TabBar />
     </div>
