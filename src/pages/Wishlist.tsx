@@ -1,16 +1,38 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search, Heart, MapPin, Tag } from "lucide-react";
+import { ArrowLeft, Search, Heart, MapPin, Tag, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
 import TabBar from "@/components/layout/TabBar";
 import { Skeleton } from "@/components/ui/skeleton";
 
+const API_BASE_URL = 'https://discountpanel.shop/api';
+
+interface ProductData {
+  id: number;
+  name: string;
+  slug?: string;
+  price?: string;
+  featured_image?: string;
+  banner_image?: string;
+  store?: {
+    id: number;
+    name: string;
+  };
+  discounts?: Array<{
+    id: number;
+    discount_type: string;
+    amount: string;
+  }>;
+}
+
 const Wishlist = () => {
   const navigate = useNavigate();
-  const { wishlistItems, isLoading, refreshWishlist, loadMore, pagination, toggleWishlist } = useWishlist();
+  const { isLoading, refreshWishlist, loadMore, pagination, toggleWishlist, getAllDisplayItems, localWishlistItems } = useWishlist();
   const { isAuthenticated } = useAuth();
+  const [fetchedItems, setFetchedItems] = useState<Map<string, ProductData>>(new Map());
+  const [fetchingIds, setFetchingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -18,16 +40,60 @@ const Wishlist = () => {
     }
   }, [isAuthenticated]);
 
+  // Fetch missing product/store data for local wishlist items
+  useEffect(() => {
+    const fetchMissingData = async () => {
+      const displayItems = getAllDisplayItems();
+      
+      for (const item of displayItems) {
+        const key = `${item.type}:${item.item_id}`;
+        
+        // Skip if we already have data or are fetching
+        if (item.item || fetchedItems.has(key) || fetchingIds.has(key)) {
+          continue;
+        }
+
+        setFetchingIds(prev => new Set(prev).add(key));
+
+        try {
+          if (item.type === 'product') {
+            const response = await fetch(`${API_BASE_URL}/products/${item.item_id}`);
+            const data = await response.json();
+            if (data.success && data.data) {
+              setFetchedItems(prev => new Map(prev).set(key, data.data));
+            }
+          } else {
+            const response = await fetch(`${API_BASE_URL}/stores/${item.item_id}`);
+            const data = await response.json();
+            if (data.success && data.data) {
+              setFetchedItems(prev => new Map(prev).set(key, data.data));
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch ${item.type} ${item.item_id}:`, error);
+        } finally {
+          setFetchingIds(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(key);
+            return newSet;
+          });
+        }
+      }
+    };
+
+    fetchMissingData();
+  }, [getAllDisplayItems, localWishlistItems]);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop <= clientHeight * 1.5 && pagination.hasMore && !isLoading) {
+    if (scrollHeight - scrollTop <= clientHeight * 1.5 && pagination.hasMore && !isLoading && isAuthenticated) {
       loadMore();
     }
   };
 
-  const getDiscount = (item: typeof wishlistItems[0]) => {
-    if (item.item?.discounts && item.item.discounts.length > 0) {
-      const discount = item.item.discounts[0];
+  const getDiscount = (item?: ProductData) => {
+    if (item?.discounts && item.discounts.length > 0) {
+      const discount = item.discounts[0];
       return discount.discount_type === 'percentage' 
         ? `${parseFloat(discount.amount)}%` 
         : `৳${discount.amount}`;
@@ -38,6 +104,15 @@ const Wishlist = () => {
   const handleRemoveFromWishlist = async (e: React.MouseEvent, type: 'product' | 'store', itemId: number) => {
     e.stopPropagation();
     await toggleWishlist(type, itemId);
+  };
+
+  const displayItems = getAllDisplayItems();
+
+  // Get item data - either from the item itself, or from fetched cache
+  const getItemData = (item: { type: 'product' | 'store'; item_id: number; item?: ProductData }) => {
+    if (item.item) return item.item;
+    const key = `${item.type}:${item.item_id}`;
+    return fetchedItems.get(key);
   };
 
   return (
@@ -54,6 +129,14 @@ const Wishlist = () => {
             </button>
             <h1 className="text-xl font-semibold text-foreground">Wishlist</h1>
           </div>
+          {!isAuthenticated && displayItems.length > 0 && (
+            <button
+              onClick={() => navigate("/login")}
+              className="text-sm text-primary font-medium hover:underline"
+            >
+              Login to sync
+            </button>
+          )}
         </div>
 
         {/* Search Bar */}
@@ -87,25 +170,7 @@ const Wishlist = () => {
         style={{ maxHeight: 'calc(100vh - 200px)' }}
         onScroll={handleScroll}
       >
-        {!isAuthenticated ? (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-20 text-center"
-          >
-            <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mb-6">
-              <Heart className="w-12 h-12 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">Login to see your wishlist</h2>
-            <p className="text-muted-foreground mb-6">Save your favorite products and stores</p>
-            <button
-              onClick={() => navigate("/login")}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
-            >
-              Login
-            </button>
-          </motion.div>
-        ) : isLoading && wishlistItems.length === 0 ? (
+        {isLoading && displayItems.length === 0 ? (
           <div className="grid grid-cols-2 gap-4">
             {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-card rounded-2xl overflow-hidden border border-border">
@@ -118,7 +183,7 @@ const Wishlist = () => {
               </div>
             ))}
           </div>
-        ) : wishlistItems.length === 0 ? (
+        ) : displayItems.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -138,28 +203,35 @@ const Wishlist = () => {
           </motion.div>
         ) : (
           <div className="grid grid-cols-2 gap-4">
-            {wishlistItems.map((wishlistItem, index) => {
-              const discount = getDiscount(wishlistItem);
-              const item = wishlistItem.item;
+            {displayItems.map((wishlistItem, index) => {
+              const itemData = getItemData(wishlistItem);
+              const discount = getDiscount(itemData);
               const isProduct = wishlistItem.type === 'product';
-              const imageUrl = isProduct ? item?.featured_image : item?.banner_image;
+              const imageUrl = isProduct ? itemData?.featured_image : itemData?.banner_image;
+              const isFetching = fetchingIds.has(`${wishlistItem.type}:${wishlistItem.item_id}`);
 
               return (
                 <motion.div
-                  key={wishlistItem.id}
+                  key={`${wishlistItem.type}-${wishlistItem.item_id}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
-                  onClick={() => navigate(isProduct ? `/product/${item?.id}` : `/store/${item?.id}`)}
+                  onClick={() => itemData && navigate(isProduct ? `/product/${wishlistItem.item_id}` : `/store/${wishlistItem.item_id}`)}
                   className="bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-all cursor-pointer group"
                 >
                   {/* Image Container */}
-                  <div className="relative aspect-square overflow-hidden">
-                    <img
-                      src={imageUrl || "/placeholder.svg"}
-                      alt={item?.name || "Item"}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  <div className="relative aspect-square overflow-hidden bg-muted">
+                    {isFetching ? (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                      </div>
+                    ) : (
+                      <img
+                        src={imageUrl || "/placeholder.svg"}
+                        alt={itemData?.name || "Item"}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    )}
                     
                     {/* Discount Badge */}
                     {discount && (
@@ -180,33 +252,45 @@ const Wishlist = () => {
 
                   {/* Content */}
                   <div className="p-3">
-                    <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
-                      {item?.name || "Unknown Item"}
-                    </h3>
-                    
-                    {isProduct && item?.store && (
-                      <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
-                        <MapPin className="w-3 h-3" />
-                        <span className="truncate">{item.store.name}</span>
-                      </div>
-                    )}
+                    {isFetching ? (
+                      <>
+                        <Skeleton className="h-5 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-1/2 mb-2" />
+                        <Skeleton className="h-4 w-1/3" />
+                      </>
+                    ) : (
+                      <>
+                        <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
+                          {itemData?.name || "Loading..."}
+                        </h3>
+                        
+                        {isProduct && itemData?.store && (
+                          <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
+                            <MapPin className="w-3 h-3" />
+                            <span className="truncate">{itemData.store.name}</span>
+                          </div>
+                        )}
 
-                    {isProduct && item?.price && (
-                      <div className="flex items-center gap-1 text-primary font-bold text-sm">
-                        ৳{parseFloat(item.price).toLocaleString()}
-                      </div>
-                    )}
+                        {isProduct && itemData?.price && (
+                          <div className="flex items-center gap-1 text-primary font-bold text-sm">
+                            ৳{parseFloat(itemData.price).toLocaleString()}
+                          </div>
+                        )}
 
-                    {/* View Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(isProduct ? `/product/${item?.id}` : `/store/${item?.id}`);
-                      }}
-                      className="w-full mt-3 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-                    >
-                      View {isProduct ? "Product" : "Store"}
-                    </button>
+                        {/* View Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (itemData) {
+                              navigate(isProduct ? `/product/${wishlistItem.item_id}` : `/store/${wishlistItem.item_id}`);
+                            }
+                          }}
+                          className="w-full mt-3 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          View {isProduct ? "Product" : "Store"}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -215,7 +299,7 @@ const Wishlist = () => {
         )}
 
         {/* Loading More Indicator */}
-        {isLoading && wishlistItems.length > 0 && (
+        {isLoading && displayItems.length > 0 && (
           <div className="flex justify-center py-4">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
