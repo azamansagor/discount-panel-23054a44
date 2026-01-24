@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Bell, MapPin, ChevronDown } from "lucide-react";
 import SearchBar from "@/components/home/SearchBar";
 import CategoryTabs from "@/components/home/CategoryTabs";
@@ -8,6 +9,8 @@ import PromoBanner from "@/components/home/PromoBanner";
 import TabBar from "@/components/layout/TabBar";
 
 const Home = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -28,7 +31,10 @@ const Home = () => {
           </div>
           
           {/* Notification Button */}
-          <button className="relative w-10 h-10 bg-card border border-border rounded-full flex items-center justify-center">
+          <button 
+            onClick={() => navigate("/notifications")}
+            className="relative w-10 h-10 bg-card border border-border rounded-full flex items-center justify-center"
+          >
             <Bell className="w-5 h-5 text-foreground" />
             <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-accent rounded-full border-2 border-background" />
           </button>
