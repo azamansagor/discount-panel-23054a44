@@ -3,37 +3,46 @@ import { useAuth } from './AuthContext';
 
 const API_BASE_URL = 'https://discountpanel.shop/api';
 
+interface WishlistItemData {
+  id: number;
+  name: string;
+  slug?: string;
+  price?: string;
+  featured_image?: string;
+  banner_image?: string;
+  store?: {
+    id: number;
+    name: string;
+  };
+  discounts?: Array<{
+    id: number;
+    discount_type: string;
+    amount: string;
+  }>;
+}
+
 interface WishlistItem {
   id: number;
   type: 'product' | 'store';
   item_id: number;
-  item: {
-    id: number;
-    name: string;
-    slug?: string;
-    price?: string;
-    featured_image?: string;
-    banner_image?: string;
-    store?: {
-      id: number;
-      name: string;
-    };
-    discounts?: Array<{
-      id: number;
-      discount_type: string;
-      amount: string;
-    }>;
-  };
+  item: WishlistItemData;
   created_at: string;
+}
+
+interface LocalWishlistEntry {
+  type: 'product' | 'store';
+  item_id: number;
+  item?: WishlistItemData;
+  added_at: string;
 }
 
 interface WishlistContextType {
   wishlistItems: WishlistItem[];
-  localWishlist: Set<string>; // Format: "type:item_id"
+  localWishlistItems: LocalWishlistEntry[];
   isLoading: boolean;
   isInWishlist: (type: 'product' | 'store', itemId: number) => boolean;
-  toggleWishlist: (type: 'product' | 'store', itemId: number) => Promise<void>;
-  addToWishlist: (type: 'product' | 'store', itemId: number) => Promise<void>;
+  toggleWishlist: (type: 'product' | 'store', itemId: number, itemData?: WishlistItemData) => Promise<void>;
+  addToWishlist: (type: 'product' | 'store', itemId: number, itemData?: WishlistItemData) => Promise<void>;
   removeFromWishlist: (type: 'product' | 'store', itemId: number) => Promise<void>;
   refreshWishlist: () => Promise<void>;
   pagination: {
@@ -43,17 +52,19 @@ interface WishlistContextType {
     hasMore: boolean;
   };
   loadMore: () => Promise<void>;
+  getAllDisplayItems: () => Array<{ type: 'product' | 'store'; item_id: number; item?: WishlistItemData }>;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const getLocalWishlistKey = () => 'local_wishlist';
+const LOCAL_WISHLIST_KEY = 'local_wishlist_items';
 
 export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated } = useAuth();
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [localWishlist, setLocalWishlist] = useState<Set<string>>(new Set());
+  const [localWishlistItems, setLocalWishlistItems] = useState<LocalWishlistEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSynced, setHasSynced] = useState(false);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     lastPage: 1,
@@ -63,26 +74,31 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   // Load local wishlist from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(getLocalWishlistKey());
+    const stored = localStorage.getItem(LOCAL_WISHLIST_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        setLocalWishlist(new Set(parsed));
+        setLocalWishlistItems(parsed);
       } catch {
-        localStorage.removeItem(getLocalWishlistKey());
+        localStorage.removeItem(LOCAL_WISHLIST_KEY);
       }
     }
   }, []);
 
   // Save local wishlist to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem(getLocalWishlistKey(), JSON.stringify([...localWishlist]));
-  }, [localWishlist]);
+    localStorage.setItem(LOCAL_WISHLIST_KEY, JSON.stringify(localWishlistItems));
+  }, [localWishlistItems]);
 
   // Sync with server when user logs in
   useEffect(() => {
-    if (isAuthenticated && user?.token) {
+    if (isAuthenticated && user?.token && !hasSynced) {
       syncWithServer();
+      setHasSynced(true);
+    }
+    if (!isAuthenticated) {
+      setHasSynced(false);
+      setWishlistItems([]);
     }
   }, [isAuthenticated, user?.token]);
 
@@ -98,17 +114,19 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const syncWithServer = async () => {
     if (!user?.token) return;
 
-    // First, sync local items to server
-    const localItems = [...localWishlist];
-    for (const item of localItems) {
-      const [type, itemId] = item.split(':');
+    setIsLoading(true);
+
+    // First, sync all local items to server
+    const localItems = [...localWishlistItems];
+    for (const entry of localItems) {
       try {
+        // Use add endpoint to ensure item is in server wishlist
         await fetch(`${API_BASE_URL}/wishlist`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({
-            type: type as 'product' | 'store',
-            item_id: parseInt(itemId),
+            type: entry.type,
+            item_id: entry.item_id,
           }),
         });
       } catch (error) {
@@ -118,6 +136,13 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
     // Then fetch the complete server wishlist
     await fetchWishlist(1, true);
+
+    // Clear local items after successful sync (they're now on server)
+    if (localItems.length > 0) {
+      setLocalWishlistItems([]);
+    }
+
+    setIsLoading(false);
   };
 
   const fetchWishlist = async (page: number = 1, reset: boolean = false) => {
@@ -139,14 +164,6 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       if (data.success) {
         const items = data.data || [];
         setWishlistItems(prev => reset ? items : [...prev, ...items]);
-        
-        // Update local wishlist set from server data
-        const serverWishlistSet = new Set<string>();
-        const allItems = reset ? items : [...wishlistItems, ...items];
-        allItems.forEach((item: WishlistItem) => {
-          serverWishlistSet.add(`${item.type}:${item.item_id}`);
-        });
-        setLocalWishlist(serverWishlistSet);
 
         setPagination({
           currentPage: data.pagination?.current_page || 1,
@@ -175,31 +192,23 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const isInWishlist = useCallback((type: 'product' | 'store', itemId: number) => {
-    return localWishlist.has(`${type}:${itemId}`);
-  }, [localWishlist]);
-
-  const toggleWishlist = async (type: 'product' | 'store', itemId: number) => {
-    const key = `${type}:${itemId}`;
-    const wasInWishlist = localWishlist.has(key);
-
-    // Optimistic update
-    setLocalWishlist(prev => {
-      const newSet = new Set(prev);
-      if (wasInWishlist) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
-    });
-
-    // Update local items list optimistically
-    if (wasInWishlist) {
-      setWishlistItems(prev => prev.filter(item => !(item.type === type && item.item_id === itemId)));
+    // Check server wishlist first if authenticated
+    if (isAuthenticated) {
+      return wishlistItems.some(item => item.type === type && item.item_id === itemId);
     }
+    // Check local wishlist for guests
+    return localWishlistItems.some(item => item.type === type && item.item_id === itemId);
+  }, [wishlistItems, localWishlistItems, isAuthenticated]);
 
-    // Sync with server if authenticated
+  const toggleWishlist = async (type: 'product' | 'store', itemId: number, itemData?: WishlistItemData) => {
+    const wasInWishlist = isInWishlist(type, itemId);
+
     if (isAuthenticated && user?.token) {
+      // Optimistic update for server wishlist
+      if (wasInWishlist) {
+        setWishlistItems(prev => prev.filter(item => !(item.type === type && item.item_id === itemId)));
+      }
+
       try {
         const response = await fetch(`${API_BASE_URL}/wishlist/toggle`, {
           method: 'POST',
@@ -208,41 +217,39 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         });
 
         const data = await response.json();
-        
-        if (!data.success) {
-          // Revert on failure
-          setLocalWishlist(prev => {
-            const newSet = new Set(prev);
-            if (wasInWishlist) {
-              newSet.add(key);
-            } else {
-              newSet.delete(key);
-            }
-            return newSet;
-          });
+
+        if (data.success) {
+          // Refresh to get updated data
+          await fetchWishlist(1, true);
         } else {
-          // Refresh to get updated item data
+          // Revert on failure - refetch
           await fetchWishlist(1, true);
         }
       } catch (error) {
         console.error('Failed to toggle wishlist:', error);
-        // Revert on error
-        setLocalWishlist(prev => {
-          const newSet = new Set(prev);
-          if (wasInWishlist) {
-            newSet.add(key);
-          } else {
-            newSet.delete(key);
-          }
-          return newSet;
-        });
+        await fetchWishlist(1, true);
+      }
+    } else {
+      // Handle local wishlist for guests
+      if (wasInWishlist) {
+        setLocalWishlistItems(prev => 
+          prev.filter(item => !(item.type === type && item.item_id === itemId))
+        );
+      } else {
+        const newEntry: LocalWishlistEntry = {
+          type,
+          item_id: itemId,
+          item: itemData,
+          added_at: new Date().toISOString(),
+        };
+        setLocalWishlistItems(prev => [...prev, newEntry]);
       }
     }
   };
 
-  const addToWishlist = async (type: 'product' | 'store', itemId: number) => {
+  const addToWishlist = async (type: 'product' | 'store', itemId: number, itemData?: WishlistItemData) => {
     if (isInWishlist(type, itemId)) return;
-    await toggleWishlist(type, itemId);
+    await toggleWishlist(type, itemId, itemData);
   };
 
   const removeFromWishlist = async (type: 'product' | 'store', itemId: number) => {
@@ -250,10 +257,26 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     await toggleWishlist(type, itemId);
   };
 
+  // Get all items to display - server items when authenticated, local items when not
+  const getAllDisplayItems = useCallback(() => {
+    if (isAuthenticated) {
+      return wishlistItems.map(item => ({
+        type: item.type,
+        item_id: item.item_id,
+        item: item.item,
+      }));
+    }
+    return localWishlistItems.map(entry => ({
+      type: entry.type,
+      item_id: entry.item_id,
+      item: entry.item,
+    }));
+  }, [isAuthenticated, wishlistItems, localWishlistItems]);
+
   return (
     <WishlistContext.Provider value={{
       wishlistItems,
-      localWishlist,
+      localWishlistItems,
       isLoading,
       isInWishlist,
       toggleWishlist,
@@ -262,6 +285,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       refreshWishlist,
       pagination,
       loadMore,
+      getAllDisplayItems,
     }}>
       {children}
     </WishlistContext.Provider>
