@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 const API_BASE_URL = 'https://discountpanel.shop/api';
 
@@ -208,13 +209,35 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
   const toggleWishlist = async (type: 'product' | 'store', itemId: number, itemData?: WishlistItemData) => {
     const wasInWishlist = isInWishlist(type, itemId);
+    const itemName = itemData?.name || (type === 'product' ? 'Product' : 'Store');
 
     if (isAuthenticated && user?.token) {
-      // Optimistic update for server wishlist
+      // Store previous state for rollback
+      const previousItems = [...wishlistItems];
+
+      // Optimistic update
       if (wasInWishlist) {
         setWishlistItems(prev => {
           const items = Array.isArray(prev) ? prev : [];
           return items.filter(item => !(item.type === type && item.item_id === itemId));
+        });
+        toast({
+          title: "Removed from wishlist",
+          description: `${itemName} has been removed from your wishlist`,
+        });
+      } else {
+        // Add optimistically
+        const optimisticItem: WishlistItem = {
+          id: Date.now(),
+          type,
+          item_id: itemId,
+          item: itemData || { id: itemId, name: itemName },
+          created_at: new Date().toISOString(),
+        };
+        setWishlistItems(prev => [...(Array.isArray(prev) ? prev : []), optimisticItem]);
+        toast({
+          title: "Added to wishlist",
+          description: `${itemName} has been added to your wishlist`,
         });
       }
 
@@ -227,16 +250,25 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
 
         const data = await response.json();
 
-        if (data.success) {
-          // Refresh to get updated data
-          await fetchWishlist(1, true);
-        } else {
-          // Revert on failure - refetch
-          await fetchWishlist(1, true);
+        if (!data.success) {
+          // Rollback on failure
+          setWishlistItems(previousItems);
+          toast({
+            title: "Error",
+            description: "Failed to update wishlist. Please try again.",
+            variant: "destructive",
+          });
         }
+        // No refetch needed - optimistic update is in place
       } catch (error) {
         console.error('Failed to toggle wishlist:', error);
-        await fetchWishlist(1, true);
+        // Rollback on error
+        setWishlistItems(previousItems);
+        toast({
+          title: "Error",
+          description: "Failed to update wishlist. Please try again.",
+          variant: "destructive",
+        });
       }
     } else {
       // Handle local wishlist for guests
@@ -244,6 +276,10 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         setLocalWishlistItems(prev => 
           prev.filter(item => !(item.type === type && item.item_id === itemId))
         );
+        toast({
+          title: "Removed from wishlist",
+          description: `${itemName} has been removed from your wishlist`,
+        });
       } else {
         const newEntry: LocalWishlistEntry = {
           type,
@@ -252,6 +288,10 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           added_at: new Date().toISOString(),
         };
         setLocalWishlistItems(prev => [...prev, newEntry]);
+        toast({
+          title: "Added to wishlist",
+          description: `${itemName} has been added to your wishlist`,
+        });
       }
     }
   };
