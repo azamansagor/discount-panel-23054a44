@@ -179,3 +179,28 @@
     display: none;
   }
 }
+
+/* Leaflet custom markers */
+.custom-price-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.user-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Leaflet popup styling */
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  padding: 0;
+}
+
+.leaflet-popup-content {
+  margin: 0.5rem;
+}
+
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}

@@ -7,7 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { WishlistProvider } from "./contexts/WishlistContext";
 import OnboardingScreen from "./components/onboarding/OnboardingScreen";
 import Home from "./pages/Home";
-import Location from "./pages/Location";
+import Discover from "./pages/Discover";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import CategoryResults from "./pages/CategoryResults";
@@ -30,7 +30,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<OnboardingScreen />} />
               <Route path="/home" element={<Home />} />
-              <Route path="/location" element={<Location />} />
+              <Route path="/discover" element={<Discover />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/login" element={<Login />} />
               <Route path="/wishlist" element={<Wishlist />} />
