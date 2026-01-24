@@ -162,8 +162,8 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
 
       if (data.success) {
-        const items = data.data || [];
-        setWishlistItems(prev => reset ? items : [...prev, ...items]);
+        const items = Array.isArray(data.data) ? data.data : [];
+        setWishlistItems(prev => reset ? items : [...(Array.isArray(prev) ? prev : []), ...items]);
 
         setPagination({
           currentPage: data.pagination?.current_page || 1,
@@ -194,10 +194,12 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   const isInWishlist = useCallback((type: 'product' | 'store', itemId: number) => {
     // Check server wishlist first if authenticated
     if (isAuthenticated) {
-      return wishlistItems.some(item => item.type === type && item.item_id === itemId);
+      const items = Array.isArray(wishlistItems) ? wishlistItems : [];
+      return items.some(item => item.type === type && item.item_id === itemId);
     }
     // Check local wishlist for guests
-    return localWishlistItems.some(item => item.type === type && item.item_id === itemId);
+    const localItems = Array.isArray(localWishlistItems) ? localWishlistItems : [];
+    return localItems.some(item => item.type === type && item.item_id === itemId);
   }, [wishlistItems, localWishlistItems, isAuthenticated]);
 
   const toggleWishlist = async (type: 'product' | 'store', itemId: number, itemData?: WishlistItemData) => {
@@ -206,7 +208,10 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     if (isAuthenticated && user?.token) {
       // Optimistic update for server wishlist
       if (wasInWishlist) {
-        setWishlistItems(prev => prev.filter(item => !(item.type === type && item.item_id === itemId)));
+        setWishlistItems(prev => {
+          const items = Array.isArray(prev) ? prev : [];
+          return items.filter(item => !(item.type === type && item.item_id === itemId));
+        });
       }
 
       try {
@@ -260,13 +265,15 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
   // Get all items to display - server items when authenticated, local items when not
   const getAllDisplayItems = useCallback(() => {
     if (isAuthenticated) {
-      return wishlistItems.map(item => ({
+      const items = Array.isArray(wishlistItems) ? wishlistItems : [];
+      return items.map(item => ({
         type: item.type,
         item_id: item.item_id,
         item: item.item,
       }));
     }
-    return localWishlistItems.map(entry => ({
+    const localItems = Array.isArray(localWishlistItems) ? localWishlistItems : [];
+    return localItems.map(entry => ({
       type: entry.type,
       item_id: entry.item_id,
       item: entry.item,
