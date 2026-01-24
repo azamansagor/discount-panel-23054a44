@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import TabBar from "@/components/layout/TabBar";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -90,11 +91,11 @@ interface Review {
 export default function StoreDetail() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   const [store, setStore] = useState<StoreDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [wishlist, setWishlist] = useState(false);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -280,9 +281,15 @@ export default function StoreDetail() {
             variant="ghost"
             size="icon"
             className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
-            onClick={() => setWishlist(!wishlist)}
+            onClick={() => {
+              toggleWishlist('store', store.id, {
+                id: store.id,
+                name: store.name,
+                banner_image: store.banner_image,
+              });
+            }}
           >
-            <Heart className={`h-5 w-5 ${wishlist ? "fill-destructive text-destructive" : ""}`} />
+            <Heart className={`h-5 w-5 ${isInWishlist('store', store.id) ? "fill-destructive text-destructive" : ""}`} />
           </Button>
           <Button
             variant="ghost"

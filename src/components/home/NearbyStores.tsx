@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { MapPin, Clock, ChevronRight } from "lucide-react";
+import { MapPin, Clock, ChevronRight, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 interface ApiStore {
   id: number;
@@ -60,6 +61,7 @@ export const NearbyStores = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   useEffect(() => {
     fetchStores().then((data) => {
@@ -121,6 +123,20 @@ export const NearbyStores = () => {
                   e.currentTarget.src = "/placeholder.svg";
                 }}
               />
+              {/* Wishlist Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleWishlist('store', parseInt(store.id), {
+                    id: parseInt(store.id),
+                    name: store.name,
+                    banner_image: store.image,
+                  });
+                }}
+                className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
+              >
+                <Heart className={`w-3 h-3 transition-colors ${isInWishlist('store', parseInt(store.id)) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
+              </button>
             </div>
 
             {/* Store Info */}
