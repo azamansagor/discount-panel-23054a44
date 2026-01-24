@@ -162,14 +162,18 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
 
       if (data.success) {
-        const items = Array.isArray(data.data) ? data.data : [];
+        // API shape observed:
+        // { success: true, data: { items: [...], pagination: {...}, total_items: n, ... } }
+        const rawItems = data?.data?.items ?? data?.data ?? data?.items;
+        const items = Array.isArray(rawItems) ? rawItems : [];
         setWishlistItems(prev => reset ? items : [...(Array.isArray(prev) ? prev : []), ...items]);
 
+        const paginationData = data?.data?.pagination ?? data?.pagination ?? {};
         setPagination({
-          currentPage: data.pagination?.current_page || 1,
-          lastPage: data.pagination?.last_page || 1,
-          total: data.pagination?.total || 0,
-          hasMore: data.pagination?.has_more_pages || false,
+          currentPage: paginationData.current_page || 1,
+          lastPage: paginationData.last_page || 1,
+          total: paginationData.total || data?.data?.total_items || 0,
+          hasMore: paginationData.has_more_pages || false,
         });
       }
     } catch (error) {
