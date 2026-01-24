@@ -27,18 +27,19 @@ interface SearchResult {
   };
 }
 
-// Custom marker icon
-const createPriceMarker = (price: string, type: 'store' | 'product') => {
+// Custom marker icon - show name instead of price
+const createPriceMarker = (name: string, type: 'store' | 'product') => {
+  const truncatedName = name.length > 15 ? name.substring(0, 15) + '...' : name;
   return L.divIcon({
     className: 'custom-price-marker',
     html: `
       <div class="bg-card shadow-lg rounded-full px-3 py-1.5 border border-border text-sm font-semibold text-foreground whitespace-nowrap flex items-center gap-1">
-        ${type === 'store' ? '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' : ''}
-        ${price}
+        ${type === 'store' ? '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>' : '<svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>'}
+        ${truncatedName}
       </div>
     `,
-    iconSize: [80, 30],
-    iconAnchor: [40, 15],
+    iconSize: [120, 30],
+    iconAnchor: [60, 15],
   });
 };
 
@@ -320,12 +321,7 @@ const Discover = () => {
               <Marker
                 key={`${item.type}-${item.id}`}
                 position={[item.latitude, item.longitude]}
-                icon={createPriceMarker(
-                  item.type === 'product' && item.discounted_price 
-                    ? formatPrice(item.discounted_price)
-                    : item.type === 'store' ? 'Store' : formatPrice(item.price || 0),
-                  item.type
-                )}
+                icon={createPriceMarker(item.name, item.type)}
                 eventHandlers={{
                   click: () => handleItemClick(item),
                 }}
@@ -380,21 +376,14 @@ const Discover = () => {
               >
                 <div className="flex gap-3 p-3">
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
-                    {item.featured_image ? (
-                      <img
-                        src={`${STORAGE_ROOT}${item.featured_image}`}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        {item.type === 'store' ? (
-                          <Store className="w-8 h-8 text-muted-foreground" />
-                        ) : (
-                          <Package className="w-8 h-8 text-muted-foreground" />
-                        )}
-                      </div>
-                    )}
+                    <img
+                      src={item.featured_image || "/placeholder.svg"}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
+                    />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground text-sm line-clamp-1">{item.name}</h3>
