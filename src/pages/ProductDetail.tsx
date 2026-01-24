@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import TabBar from "@/components/layout/TabBar";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -72,11 +73,11 @@ interface Review {
 export default function ProductDetail() {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [wishlist, setWishlist] = useState(false);
   
   // Image swipe state
   const imageSwipeStartRef = useRef(0);
@@ -417,11 +418,20 @@ export default function ProductDetail() {
             variant="ghost"
             size="icon"
             className="bg-background/80 backdrop-blur-sm rounded-full"
-            onClick={() => setWishlist(!wishlist)}
+            onClick={() => {
+              toggleWishlist('product', product.id, {
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                featured_image: product.featured_image,
+                store: product.store,
+                discounts: product.discounts,
+              });
+            }}
           >
             <Heart
               className={`h-5 w-5 transition-colors ${
-                wishlist ? "fill-destructive text-destructive" : ""
+                isInWishlist('product', product.id) ? "fill-destructive text-destructive" : ""
               }`}
             />
           </Button>

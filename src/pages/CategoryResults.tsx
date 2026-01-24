@@ -5,6 +5,7 @@ import { ArrowLeft, Heart, Search, MapPin, Clock, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TabBar from "@/components/layout/TabBar";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -36,6 +37,7 @@ type FilterType = "all" | "store" | "product";
 const CategoryResults = () => {
   const { categoryId, categoryName } = useParams();
   const navigate = useNavigate();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   
   const [items, setItems] = useState<ResultItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,6 @@ const CategoryResults = () => {
   const [filter, setFilter] = useState<FilterType>("all");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
   
@@ -166,16 +167,15 @@ const CategoryResults = () => {
     };
   }, [hasMore, loadingMore, loading, page, filter, fetchItems]);
 
-  const toggleWishlist = (itemId: number, type: string) => {
-    const key = `${type}-${itemId}`;
-    setWishlist(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(key)) {
-        newSet.delete(key);
-      } else {
-        newSet.add(key);
-      }
-      return newSet;
+  const handleWishlistToggle = (item: ResultItem) => {
+    const type = item.type as 'product' | 'store';
+    toggleWishlist(type, item.id, {
+      id: item.id,
+      name: item.name,
+      price: item.price ? String(item.price) : undefined,
+      featured_image: item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : undefined,
+      banner_image: item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : undefined,
+      discounts: item.discount ? [{ id: 0, discount_type: 'percentage', amount: String(item.discount) }] : undefined,
     });
   };
 
@@ -312,13 +312,13 @@ const CategoryResults = () => {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleWishlist(item.id, item.type);
+                        handleWishlistToggle(item);
                       }}
                       className="absolute top-4 right-4 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
                     >
                       <Heart
                         className={`h-5 w-5 transition-colors ${
-                          wishlist.has(itemKey)
+                          isInWishlist(item.type as 'product' | 'store', item.id)
                             ? "fill-destructive text-destructive"
                             : "text-white"
                         }`}

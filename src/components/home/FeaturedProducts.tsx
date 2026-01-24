@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Star, Heart, MapPin, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useWishlist } from "@/contexts/WishlistContext";
 
 interface Discount {
   id: number;
@@ -89,6 +90,7 @@ const fetchProducts = async (): Promise<Product[]> => {
 
 export const FeaturedProducts = () => {
   const navigate = useNavigate();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -171,9 +173,18 @@ export const FeaturedProducts = () => {
                 {/* Wishlist Button */}
                 <button 
                   className="absolute top-3 right-3 w-8 h-8 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleWishlist('product', parseInt(product.id), {
+                      id: parseInt(product.id),
+                      name: product.name,
+                      price: String(product.price),
+                      featured_image: product.image,
+                      store: { id: 0, name: product.storeName },
+                    });
+                  }}
                 >
-                  <Heart className="w-4 h-4 text-muted-foreground" />
+                  <Heart className={`w-4 h-4 transition-colors ${isInWishlist('product', parseInt(product.id)) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
                 </button>
               </div>
 
