@@ -215,8 +215,9 @@ const Discover = () => {
     return item.type === activeFilter;
   });
 
-  const formatPrice = (price: number) => {
-    return `$${price.toFixed(2)}`;
+  const formatPrice = (price: number | undefined | null) => {
+    const numPrice = typeof price === 'number' && !isNaN(price) ? price : 0;
+    return `$${numPrice.toFixed(2)}`;
   };
 
   const handleItemClick = (item: SearchResult) => {
