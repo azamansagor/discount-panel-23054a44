@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Search, ChevronLeft, Navigation, Store, Package } from "lucide-react";
+import { MapPin, Search, ChevronLeft, Navigation, Store, Package, Heart } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useNavigate } from "react-router-dom";
 import TabBar from "@/components/layout/TabBar";
 import { Input } from "@/components/ui/input";
+import { useWishlist } from "@/contexts/WishlistContext";
 import "leaflet/dist/leaflet.css";
 
 const API_ROOT = "https://discountpanel.shop/api";
@@ -54,6 +55,7 @@ const MapCenterUpdater = ({ center }: { center: [number, number] }) => {
 
 const Discover = () => {
   const navigate = useNavigate();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<'all' | 'store' | 'product'>('all');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -375,7 +377,7 @@ const Discover = () => {
                 className="flex-shrink-0 w-64 bg-card rounded-2xl border border-border/50 overflow-hidden cursor-pointer"
               >
                 <div className="flex gap-3 p-3">
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
                     <img
                       src={item.featured_image || "/placeholder.svg"}
                       alt={item.name}
@@ -384,6 +386,22 @@ const Discover = () => {
                         e.currentTarget.src = "/placeholder.svg";
                       }}
                     />
+                    {/* Wishlist Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleWishlist(item.type, item.id, {
+                          id: item.id,
+                          name: item.name,
+                          price: item.price ? String(item.price) : undefined,
+                          featured_image: item.featured_image,
+                          banner_image: item.featured_image,
+                        });
+                      }}
+                      className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
+                    >
+                      <Heart className={`w-3 h-3 transition-colors ${isInWishlist(item.type, item.id) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
+                    </button>
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-foreground text-sm line-clamp-1">{item.name}</h3>
