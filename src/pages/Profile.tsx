@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { 
   User, 
   Settings, 
@@ -7,21 +8,36 @@ import {
   Bell, 
   HelpCircle, 
   LogOut,
+  LogIn,
   ChevronRight,
   Ticket
 } from "lucide-react";
 import TabBar from "@/components/layout/TabBar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
   { icon: ShoppingBag, label: "My Orders", badge: "3" },
   { icon: Heart, label: "Wishlist", badge: "12" },
   { icon: Ticket, label: "My Coupons", badge: "5" },
-  { icon: Bell, label: "Notifications", badge: null },
+  { icon: Bell, label: "Notifications", badge: null, route: "/notifications" },
   { icon: Settings, label: "Settings", badge: null },
   { icon: HelpCircle, label: "Help & Support", badge: null },
 ];
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  const handleMenuClick = (route?: string) => {
+    if (route) {
+      navigate(route);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Header */}
@@ -49,10 +65,28 @@ const Profile = () => {
             <User className="w-8 h-8 text-primary-foreground" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-foreground">John Doe</h2>
-            <p className="text-sm text-muted-foreground">john.doe@email.com</p>
+            {isAuthenticated ? (
+              <>
+                <h2 className="text-lg font-bold text-foreground">{user?.name}</h2>
+                <p className="text-sm text-muted-foreground">{user?.email}</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-lg font-bold text-foreground">Guest User</h2>
+                <p className="text-sm text-muted-foreground">Login to access your account</p>
+              </>
+            )}
           </div>
-          <button className="text-primary font-medium text-sm">Edit</button>
+          {isAuthenticated ? (
+            <button className="text-primary font-medium text-sm">Edit</button>
+          ) : (
+            <button 
+              onClick={() => navigate("/login")}
+              className="text-primary font-medium text-sm"
+            >
+              Login
+            </button>
+          )}
         </motion.div>
       </div>
 
@@ -60,9 +94,9 @@ const Profile = () => {
       <div className="px-4 mb-6">
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: "Saved", value: "$1,234" },
-            { label: "Orders", value: "23" },
-            { label: "Points", value: "850" },
+            { label: "Saved", value: isAuthenticated ? "$1,234" : "$0" },
+            { label: "Orders", value: isAuthenticated ? "23" : "0" },
+            { label: "Points", value: isAuthenticated ? "850" : "0" },
           ].map((stat, index) => (
             <motion.div
               key={stat.label}
@@ -89,6 +123,7 @@ const Profile = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
+                onClick={() => handleMenuClick(item.route)}
                 className="flex items-center gap-3 w-full px-4 py-4 hover:bg-secondary/50 transition-colors border-b border-border/50 last:border-b-0"
               >
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
@@ -109,17 +144,31 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Logout Button */}
+      {/* Login/Logout Button */}
       <div className="px-4 py-6">
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="flex items-center justify-center gap-2 w-full py-4 text-destructive font-medium"
-        >
-          <LogOut className="w-5 h-5" />
-          Log Out
-        </motion.button>
+        {isAuthenticated ? (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 w-full py-4 text-destructive font-medium"
+          >
+            <LogOut className="w-5 h-5" />
+            Log Out
+          </motion.button>
+        ) : (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            onClick={() => navigate("/login")}
+            className="flex items-center justify-center gap-2 w-full py-4 bg-primary text-primary-foreground font-medium rounded-xl"
+          >
+            <LogIn className="w-5 h-5" />
+            Log In
+          </motion.button>
+        )}
       </div>
 
       <TabBar />
