@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Home, LayoutGrid, Heart, User } from "lucide-react";
+import { Home, MapPin, Heart, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface TabItem {
@@ -10,7 +10,7 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   { path: "/home", label: "Home", icon: Home },
-  { path: "/discover", label: "Discover", icon: LayoutGrid },
+  { path: "/discover", label: "Discover", icon: MapPin },
   { path: "/wishlist", label: "Wishlist", icon: Heart },
   { path: "/profile", label: "Account", icon: User },
 ];
