@@ -192,14 +192,13 @@ const CategoryResults = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background">
         <div className="flex items-center gap-3 px-4 py-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="shrink-0 -ml-2"
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="shrink-0 -ml-2 h-10 w-10 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
-          </Button>
+          </button>
           <h1 className="text-xl font-bold text-foreground">
             {categoryName ? decodeURIComponent(categoryName) : "Search"}
           </h1>
