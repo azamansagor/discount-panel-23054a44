@@ -220,12 +220,21 @@ const CategoryResults = () => {
         </div>
       </div>
 
-      {/* Results Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <h2 className="text-lg font-bold text-foreground">Search Result</h2>
-        <button className="text-accent font-medium text-sm underline underline-offset-2">
-          Short by
-        </button>
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 px-4 py-3">
+        {(["all", "product", "store"] as FilterType[]).map((filterType) => (
+          <button
+            key={filterType}
+            onClick={() => setFilter(filterType)}
+            className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+              filter === filterType
+                ? "bg-primary text-primary-foreground"
+                : "bg-secondary text-muted-foreground hover:bg-secondary/80"
+            }`}
+          >
+            {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+          </button>
+        ))}
       </div>
 
       {/* Results List */}
