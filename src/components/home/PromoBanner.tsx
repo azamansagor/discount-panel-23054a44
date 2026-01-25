@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export const PromoBanner = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="px-4 py-4">
       <motion.div
@@ -21,6 +24,7 @@ export const PromoBanner = () => {
           </p>
           <motion.button
             whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/explore")}
             className="px-5 py-2.5 bg-card text-foreground rounded-xl text-sm font-semibold shadow-lg hover:bg-card/90 transition-colors"
           >
             Explore Now
