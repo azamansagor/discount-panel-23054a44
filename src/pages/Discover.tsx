@@ -161,15 +161,22 @@ const Discover = () => {
       // Process stores with geocoding fallback
       const stores = await Promise.all(
         (storesData.data || []).map(async (store: any) => {
-          let lat = store.latitude ? parseFloat(store.latitude) : undefined;
-          let lon = store.longitude ? parseFloat(store.longitude) : undefined;
+          let lat: number | undefined;
+          let lon: number | undefined;
           
-          if ((lat === undefined || lon === undefined) && store.location_name) {
+          // Prioritize geocoding location_name over API coordinates
+          if (store.location_name) {
             const geocoded = await geocodeLocation(store.location_name);
             if (geocoded) {
               lat = geocoded.lat;
               lon = geocoded.lon;
             }
+          }
+          
+          // Fall back to API coordinates only if geocoding didn't work
+          if (lat === undefined || lon === undefined) {
+            lat = store.latitude ? parseFloat(store.latitude) : undefined;
+            lon = store.longitude ? parseFloat(store.longitude) : undefined;
           }
           
           return {
@@ -189,15 +196,22 @@ const Discover = () => {
       const products = await Promise.all(
         (productsData.data || []).map(async (product: any) => {
           const discount = product.discounts?.[0];
-          let lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
-          let lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
+          let lat: number | undefined;
+          let lon: number | undefined;
           
-          if ((lat === undefined || lon === undefined) && product.store?.location_name) {
+          // Prioritize geocoding location_name over API coordinates
+          if (product.store?.location_name) {
             const geocoded = await geocodeLocation(product.store.location_name);
             if (geocoded) {
               lat = geocoded.lat;
               lon = geocoded.lon;
             }
+          }
+          
+          // Fall back to API coordinates only if geocoding didn't work
+          if (lat === undefined || lon === undefined) {
+            lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
+            lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
           }
           
           return {
@@ -252,16 +266,22 @@ const Discover = () => {
       // Process stores with geocoding fallback
       const storesWithCoords = await Promise.all(
         (storesData.data || []).map(async (store: any) => {
-          let lat = store.latitude ? parseFloat(store.latitude) : undefined;
-          let lon = store.longitude ? parseFloat(store.longitude) : undefined;
+          let lat: number | undefined;
+          let lon: number | undefined;
           
-          // If no coordinates but has location_name, geocode it
-          if ((lat === undefined || lon === undefined) && store.location_name) {
+          // Prioritize geocoding location_name over API coordinates
+          if (store.location_name) {
             const geocoded = await geocodeLocation(store.location_name);
             if (geocoded) {
               lat = geocoded.lat;
               lon = geocoded.lon;
             }
+          }
+          
+          // Fall back to API coordinates only if geocoding didn't work
+          if (lat === undefined || lon === undefined) {
+            lat = store.latitude ? parseFloat(store.latitude) : undefined;
+            lon = store.longitude ? parseFloat(store.longitude) : undefined;
           }
           
           return {
@@ -280,16 +300,22 @@ const Discover = () => {
       // Process products with geocoding fallback
       const productsWithCoords = await Promise.all(
         (productsData.data || []).map(async (product: any) => {
-          let lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
-          let lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
+          let lat: number | undefined;
+          let lon: number | undefined;
           
-          // If no coordinates but store has location_name, geocode it
-          if ((lat === undefined || lon === undefined) && product.store?.location_name) {
+          // Prioritize geocoding location_name over API coordinates
+          if (product.store?.location_name) {
             const geocoded = await geocodeLocation(product.store.location_name);
             if (geocoded) {
               lat = geocoded.lat;
               lon = geocoded.lon;
             }
+          }
+          
+          // Fall back to API coordinates only if geocoding didn't work
+          if (lat === undefined || lon === undefined) {
+            lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
+            lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
           }
           
           return {
@@ -383,15 +409,22 @@ const Discover = () => {
         // Process stores with geocoding fallback
         const stores = await Promise.all(
           (storesData.data || []).map(async (store: any) => {
-            let lat = store.latitude ? parseFloat(store.latitude) : undefined;
-            let lon = store.longitude ? parseFloat(store.longitude) : undefined;
+            let lat: number | undefined;
+            let lon: number | undefined;
             
-            if ((lat === undefined || lon === undefined) && store.location_name) {
+            // Prioritize geocoding location_name over API coordinates
+            if (store.location_name) {
               const geocoded = await geocodeLocation(store.location_name);
               if (geocoded) {
                 lat = geocoded.lat;
                 lon = geocoded.lon;
               }
+            }
+            
+            // Fall back to API coordinates only if geocoding didn't work
+            if (lat === undefined || lon === undefined) {
+              lat = store.latitude ? parseFloat(store.latitude) : undefined;
+              lon = store.longitude ? parseFloat(store.longitude) : undefined;
             }
             
             return {
@@ -411,15 +444,22 @@ const Discover = () => {
         const products = await Promise.all(
           (productsData.data || []).map(async (product: any) => {
             const discount = product.discounts?.[0];
-            let lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
-            let lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
+            let lat: number | undefined;
+            let lon: number | undefined;
             
-            if ((lat === undefined || lon === undefined) && product.store?.location_name) {
+            // Prioritize geocoding location_name over API coordinates
+            if (product.store?.location_name) {
               const geocoded = await geocodeLocation(product.store.location_name);
               if (geocoded) {
                 lat = geocoded.lat;
                 lon = geocoded.lon;
               }
+            }
+            
+            // Fall back to API coordinates only if geocoding didn't work
+            if (lat === undefined || lon === undefined) {
+              lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
+              lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
             }
             
             return {
