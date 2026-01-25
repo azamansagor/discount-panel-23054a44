@@ -133,9 +133,6 @@ export const NearbyStores = () => {
                   }}
                 />
                 
-                {/* Curved bottom overlay */}
-                <div className="absolute bottom-0 left-0 right-0 h-5 bg-card" style={{ borderRadius: '20px 20px 0 0' }} />
-                
                 {/* Category Badge */}
                 <div className="absolute top-3 left-3 bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
                   {store.category}
@@ -155,18 +152,18 @@ export const NearbyStores = () => {
                 >
                   <Heart className={`w-4 h-4 transition-colors ${inWishlist ? 'fill-destructive text-destructive' : 'text-white'}`} />
                 </button>
+              </div>
 
+              {/* Content with curved top */}
+              <div className="relative bg-card -mt-5 pt-2 px-3.5 pb-3.5" style={{ borderRadius: '20px 20px 0 0' }}>
                 {/* Time & Distance */}
-                <div className="absolute bottom-7 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
                   <Clock className="h-3 w-3" />
                   <span>{store.deliveryTime}</span>
                   <span>·</span>
                   <span>{store.distance}</span>
                 </div>
-              </div>
 
-              {/* Content */}
-              <div className="p-3.5">
                 {/* Name */}
                 <h3 className="text-sm font-bold text-foreground line-clamp-1 mb-1.5">
                   {store.name}

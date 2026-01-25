@@ -168,9 +168,6 @@ export const FeaturedProducts = () => {
                     }}
                   />
                   
-                  {/* Curved bottom overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 h-4 bg-card" style={{ borderRadius: '16px 16px 0 0' }} />
-                  
                   {/* Discount Badge */}
                   {product.discount > 0 && (
                     <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
@@ -194,18 +191,18 @@ export const FeaturedProducts = () => {
                   >
                     <Heart className={`w-4 h-4 transition-colors ${inWishlist ? 'fill-destructive text-destructive' : 'text-white'}`} />
                   </button>
+                </div>
 
+                {/* Content with curved top */}
+                <div className="relative bg-card -mt-4 pt-2 px-3.5 pb-3.5" style={{ borderRadius: '16px 16px 0 0' }}>
                   {/* Time & Distance */}
-                  <div className="absolute bottom-6 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
                     <Clock className="h-3 w-3" />
                     <span>25-30 mins</span>
                     <span>·</span>
                     <span>4.4 km</span>
                   </div>
-                </div>
 
-                {/* Content */}
-                <div className="p-3.5">
                   {/* Name */}
                   <h3 className="text-sm font-bold text-foreground line-clamp-1 mb-1.5">
                     {product.name}
@@ -215,7 +212,7 @@ export const FeaturedProducts = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <MapPin className="w-3 h-3" />
-                      <span className="text-xs truncate max-w-[120px]">{product.location}</span>
+                      <span className="text-xs truncate max-w-[100px]">{product.location}</span>
                     </div>
                     <span className="text-sm font-bold text-primary">
                       ${product.price.toLocaleString()}

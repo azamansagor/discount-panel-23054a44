@@ -259,9 +259,6 @@ const Wishlist = () => {
                       />
                     )}
                     
-                    {/* Curved bottom overlay */}
-                    <div className="absolute bottom-0 left-0 right-0 h-5 bg-card" style={{ borderRadius: '20px 20px 0 0' }} />
-                    
                     {/* Discount Badge */}
                     {discount && discount > 0 && (
                       <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
@@ -276,25 +273,26 @@ const Wishlist = () => {
                     >
                       <Heart className="w-4 h-4 text-destructive fill-destructive" />
                     </button>
-
-                    {/* Time & Distance */}
-                    <div className="absolute bottom-7 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
-                      <Clock className="h-3 w-3" />
-                      <span>25-30 mins</span>
-                      <span>·</span>
-                      <span>4.4 km</span>
-                    </div>
                   </div>
 
-                  {/* Content */}
-                  <div className="p-3.5">
+                  {/* Content with curved top */}
+                  <div className="relative bg-card -mt-5 pt-2 px-3.5 pb-3.5" style={{ borderRadius: '20px 20px 0 0' }}>
                     {isFetching ? (
                       <>
+                        <Skeleton className="h-4 w-1/3 mb-2" />
                         <Skeleton className="h-5 w-3/4 mb-2" />
                         <Skeleton className="h-4 w-1/2" />
                       </>
                     ) : (
                       <>
+                        {/* Time & Distance */}
+                        <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
+                          <Clock className="h-3 w-3" />
+                          <span>25-30 mins</span>
+                          <span>·</span>
+                          <span>4.4 km</span>
+                        </div>
+
                         <h3 className="font-bold text-foreground text-sm line-clamp-1 mb-1.5">
                           {itemData?.name || "Loading..."}
                         </h3>
@@ -302,7 +300,7 @@ const Wishlist = () => {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1 text-muted-foreground text-xs">
                             <MapPin className="w-3 h-3" />
-                            <span className="truncate max-w-[150px]">
+                            <span className="truncate max-w-[120px]">
                               {isProduct ? itemData?.store?.name : itemData?.address || "Location"}
                             </span>
                           </div>
