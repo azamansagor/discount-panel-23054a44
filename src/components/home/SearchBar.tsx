@@ -9,6 +9,10 @@ export const SearchBar = () => {
     navigate("/search");
   };
 
+  const handleFilterClick = () => {
+    navigate("/search?openFilters=true");
+  };
+
   return (
     <div className="px-4 py-3">
       <div className="flex items-center gap-2">
@@ -28,7 +32,7 @@ export const SearchBar = () => {
         {/* Filter Button */}
         <motion.button 
           whileTap={{ scale: 0.95 }}
-          onClick={handleSearchClick}
+          onClick={handleFilterClick}
           className="w-12 h-12 bg-card border border-border rounded-xl flex items-center justify-center hover:bg-secondary transition-colors"
         >
           <SlidersHorizontal className="w-5 h-5 text-foreground" />
