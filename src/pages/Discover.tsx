@@ -124,15 +124,15 @@ const Discover = () => {
       });
       const productsData = await productsRes.json();
 
+      // Use real coordinates from API if available
       const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
         id: store.id,
         name: store.name,
         type: 'store' as const,
         address: store.address,
         featured_image: store.banner_image,
-        // Generate random nearby coordinates for demo (in production, use real coordinates)
-        latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
-        longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+        latitude: store.latitude ? parseFloat(store.latitude) : undefined,
+        longitude: store.longitude ? parseFloat(store.longitude) : undefined,
       }));
 
       const products: SearchResult[] = (productsData.data || []).map((product: any) => {
@@ -145,9 +145,8 @@ const Discover = () => {
           discounted_price: discount ? product.price - (product.price * (discount.discount_percentage / 100)) : product.price,
           featured_image: product.featured_image,
           store: product.store,
-          // Generate random nearby coordinates for demo
-          latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
-          longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+          latitude: product.store?.latitude ? parseFloat(product.store.latitude) : undefined,
+          longitude: product.store?.longitude ? parseFloat(product.store.longitude) : undefined,
         };
       });
 
@@ -280,14 +279,15 @@ const Discover = () => {
         const storesData = await storesRes.json();
         const productsData = await productsRes.json();
 
+        // Use real coordinates from API if available
         const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
           id: store.id,
           name: store.name,
           type: 'store' as const,
           address: store.address,
           featured_image: store.banner_image,
-          latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
-          longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+          latitude: store.latitude ? parseFloat(store.latitude) : undefined,
+          longitude: store.longitude ? parseFloat(store.longitude) : undefined,
         }));
 
         const products: SearchResult[] = (productsData.data || []).map((product: any) => {
@@ -300,8 +300,8 @@ const Discover = () => {
             discounted_price: discount ? product.price - (product.price * (discount.discount_percentage / 100)) : product.price,
             featured_image: product.featured_image,
             store: product.store,
-            latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
-            longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+            latitude: product.store?.latitude ? parseFloat(product.store.latitude) : undefined,
+            longitude: product.store?.longitude ? parseFloat(product.store.longitude) : undefined,
           };
         });
 
