@@ -96,7 +96,10 @@ export const NearbyStores = () => {
     <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-foreground">Near By Locations</h2>
-        <button className="flex items-center gap-1 text-primary font-medium text-sm">
+        <button 
+          onClick={() => navigate("/explore")}
+          className="flex items-center gap-1 text-primary font-medium text-sm"
+        >
           See all
           <ChevronRight className="w-4 h-4" />
         </button>
