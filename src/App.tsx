@@ -17,6 +17,7 @@ import Notifications from "./pages/Notifications";
 import Login from "./pages/Login";
 import Wishlist from "./pages/Wishlist";
 import Search from "./pages/Search";
+import Explore from "./pages/Explore";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/search" element={<Search />} />
+              <Route path="/explore" element={<Explore />} />
               <Route path="/category/:categoryId/:categoryName?" element={<CategoryResults />} />
               <Route path="/store/:storeId" element={<StoreDetail />} />
               <Route path="/product/:productId" element={<ProductDetail />} />
