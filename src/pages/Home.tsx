@@ -172,7 +172,7 @@ const BestOffers = () => {
         const response = await fetch(`${API_ROOT}/products`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ per_page: 4, page: 1 }),
+          body: JSON.stringify({ per_page: 6, page: 1 }),
         });
         const data = await response.json();
         setProducts(data.data || []);
@@ -211,7 +211,10 @@ const BestOffers = () => {
     <div className="py-4 pb-8">
       <div className="px-4 flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-foreground">Best Offers</h2>
-        <button className="flex items-center gap-1 text-primary font-medium text-sm">
+        <button 
+          onClick={() => navigate("/explore")}
+          className="flex items-center gap-1 text-primary font-medium text-sm"
+        >
           See all
           <ChevronRight className="w-4 h-4" />
         </button>
