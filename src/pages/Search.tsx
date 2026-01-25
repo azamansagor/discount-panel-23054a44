@@ -133,6 +133,14 @@ const Search = () => {
   }, []);
 
   const fetchResults = useCallback(async (pageNum: number, reset = false, overrideFilters?: SearchFiltersState) => {
+    // Don't fetch if no search query
+    if (!searchQuery.trim()) {
+      setResults([]);
+      setLoading(false);
+      setLoadingMore(false);
+      return;
+    }
+
     if (reset) {
       setLoading(true);
     } else {
@@ -147,7 +155,7 @@ const Search = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: searchQuery,
+          query: searchQuery.trim(),
           type: activeFilters.type,
           price_range: activeFilters.priceRange,
           rating: activeFilters.rating,
