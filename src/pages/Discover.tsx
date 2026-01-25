@@ -232,12 +232,12 @@ const Discover = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header with Search */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-[1000] bg-background/95 backdrop-blur-md border-b border-border/50 safe-area-inset-top"
+        className="sticky top-0 z-[1000] bg-background/95 backdrop-blur-md border-b border-border/50 safe-area-inset-top flex-shrink-0"
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <button 
@@ -258,36 +258,37 @@ const Discover = () => {
         </div>
       </motion.header>
 
-      {/* Filter Tabs & Location Info */}
-      <div className="absolute top-[72px] left-0 right-0 z-[999] px-4 py-3">
-        <div className="flex items-center gap-2 mb-2">
-          {[
-            { key: 'all', label: 'All', icon: null },
-            { key: 'store', label: 'Stores', icon: Store },
-            { key: 'product', label: 'Products', icon: Package },
-          ].map((filter) => (
-            <button
-              key={filter.key}
-              onClick={() => setActiveFilter(filter.key as typeof activeFilter)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                activeFilter === filter.key
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card border border-border text-foreground'
-              }`}
-            >
-              {filter.icon && <filter.icon className="w-4 h-4" />}
-              {filter.label}
-            </button>
-          ))}
+      {/* Map Container - fills available space */}
+      <div className="flex-1 relative">
+        {/* Filter Tabs & Location Info - floating over map */}
+        <div className="absolute top-0 left-0 right-0 z-[999] px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            {[
+              { key: 'all', label: 'All', icon: null },
+              { key: 'store', label: 'Stores', icon: Store },
+              { key: 'product', label: 'Products', icon: Package },
+            ].map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => setActiveFilter(filter.key as typeof activeFilter)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  activeFilter === filter.key
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card border border-border text-foreground'
+                }`}
+              >
+                {filter.icon && <filter.icon className="w-4 h-4" />}
+                {filter.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-sm">
+            <span className="font-bold text-foreground">{filteredResults.length} listings</span>
+            <span className="text-primary"> available in {locationName}</span>
+          </p>
         </div>
-        <p className="text-sm">
-          <span className="font-bold text-foreground">{filteredResults.length} listings</span>
-          <span className="text-primary"> available in {locationName}</span>
-        </p>
-      </div>
 
-      {/* Map */}
-      <div className="h-[55vh] relative">
+        {/* Map */}
         <MapContainer
           center={userLocation}
           zoom={14}
@@ -348,93 +349,96 @@ const Discover = () => {
               });
             }
           }}
-          className="absolute bottom-4 right-4 z-[1000] p-3 bg-card rounded-full shadow-lg border border-border"
+          className="absolute bottom-44 right-4 z-[1000] p-3 bg-card rounded-full shadow-lg border border-border"
         >
           <Navigation className="w-5 h-5 text-primary" />
         </button>
-      </div>
 
-      {/* Results List */}
-      <div className="px-4 pt-4">
-        <h2 className="text-lg font-bold text-foreground mb-3">
-          {searchQuery ? 'Search Results' : 'Nearby'}
-        </h2>
-        
-        {loading ? (
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex-shrink-0 w-64 h-32 bg-secondary rounded-2xl animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-            {filteredResults.map((item) => (
-              <motion.div
-                key={`${item.type}-${item.id}`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => handleItemClick(item)}
-                className="flex-shrink-0 w-64 bg-card rounded-2xl border border-border/50 overflow-hidden cursor-pointer"
-              >
-                <div className="flex gap-3 p-3">
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
-                    <img
-                      src={item.featured_image || "/placeholder.svg"}
-                      alt={item.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg";
-                      }}
-                    />
-                    {/* Wishlist Button */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleWishlist(item.type, item.id, {
-                          id: item.id,
-                          name: item.name,
-                          price: item.price ? String(item.price) : undefined,
-                          featured_image: item.featured_image,
-                          banner_image: item.featured_image,
-                        });
-                      }}
-                      className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
-                    >
-                      <Heart className={`w-3 h-3 transition-colors ${isInWishlist(item.type, item.id) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
-                    </button>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground text-sm line-clamp-1">{item.name}</h3>
-                    <div className="flex items-center gap-1 mt-1 text-muted-foreground">
-                      <MapPin className="w-3 h-3" />
-                      <p className="text-xs line-clamp-1">
-                        {item.type === 'store' 
-                          ? item.address || 'Address not available'
-                          : item.store?.address || 'Location not available'
-                        }
-                      </p>
-                    </div>
-                    {item.type === 'product' && item.discounted_price && (
-                      <p className="text-primary font-bold mt-2">
-                        {formatPrice(item.discounted_price)}
-                        {item.price !== item.discounted_price && (
-                          <span className="text-muted-foreground text-xs line-through ml-2">
-                            {formatPrice(item.price || 0)}
+        {/* Bottom Results Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 z-[999] bg-background rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] pb-20">
+          <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mt-3 mb-2" />
+          <div className="px-4 pb-4">
+            <h2 className="text-lg font-bold text-foreground mb-3">
+              {searchQuery ? 'Search Results' : 'Nearby'}
+            </h2>
+            
+            {loading ? (
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex-shrink-0 w-64 h-24 bg-secondary rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                {filteredResults.map((item) => (
+                  <motion.div
+                    key={`${item.type}-${item.id}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={() => handleItemClick(item)}
+                    className="flex-shrink-0 w-64 bg-card rounded-2xl border border-border/50 overflow-hidden cursor-pointer"
+                  >
+                    <div className="flex gap-3 p-3">
+                      <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-secondary flex-shrink-0">
+                        <img
+                          src={item.featured_image || "/placeholder.svg"}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = "/placeholder.svg";
+                          }}
+                        />
+                        {/* Wishlist Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWishlist(item.type, item.id, {
+                              id: item.id,
+                              name: item.name,
+                              price: item.price ? String(item.price) : undefined,
+                              featured_image: item.featured_image,
+                              banner_image: item.featured_image,
+                            });
+                          }}
+                          className="absolute top-1 right-1 w-5 h-5 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
+                        >
+                          <Heart className={`w-2.5 h-2.5 transition-colors ${isInWishlist(item.type, item.id) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
+                        </button>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground text-sm line-clamp-1">{item.name}</h3>
+                        <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          <p className="text-xs line-clamp-1">
+                            {item.type === 'store' 
+                              ? item.address || 'Address not available'
+                              : item.store?.address || 'Location not available'
+                            }
+                          </p>
+                        </div>
+                        {item.type === 'product' && item.discounted_price && (
+                          <p className="text-primary font-bold text-sm mt-1">
+                            {formatPrice(item.discounted_price)}
+                            {item.price !== item.discounted_price && (
+                              <span className="text-muted-foreground text-xs line-through ml-1">
+                                {formatPrice(item.price || 0)}
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        {item.type === 'store' && (
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                            Store
                           </span>
                         )}
-                      </p>
-                    )}
-                    {item.type === 'store' && (
-                      <span className="inline-block mt-2 px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">
-                        Store
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       <TabBar />
