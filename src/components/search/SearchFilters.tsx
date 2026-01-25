@@ -29,11 +29,14 @@ const SearchFilters = ({ isOpen, onClose, filters, onApply }: SearchFiltersProps
   }, [isOpen, filters]);
 
   const handleReset = () => {
-    setLocalFilters({
+    const defaultFilters: SearchFiltersState = {
       type: "all",
       priceRange: "all",
       rating: "all",
-    });
+    };
+    setLocalFilters(defaultFilters);
+    onApply(defaultFilters);
+    onClose();
   };
 
   const handleApply = () => {
