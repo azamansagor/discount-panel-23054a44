@@ -62,6 +62,16 @@ const Search = () => {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Auto-focus search input on mount
+  useEffect(() => {
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Fetch suggestions
   useEffect(() => {
@@ -161,17 +171,7 @@ const Search = () => {
     }
   }, [searchQuery, filters]);
 
-  // Initial search and filter changes
-  useEffect(() => {
-    if (searchQuery.length > 0) {
-      setPage(1);
-      setHasMore(true);
-      fetchResults(1, true);
-      setShowSuggestions(false);
-    } else {
-      setResults([]);
-    }
-  }, [filters]);
+  // Remove the automatic filter-triggered search - now only on Apply button
 
   // Handle search submit
   const handleSearch = () => {
@@ -284,6 +284,7 @@ const Search = () => {
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search products & stores..."
                 value={searchQuery}
@@ -538,7 +539,15 @@ const Search = () => {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         filters={filters}
-        onFiltersChange={setFilters}
+        onApply={(newFilters) => {
+          setFilters(newFilters);
+          if (searchQuery.length > 0) {
+            setPage(1);
+            setHasMore(true);
+            // Trigger search with new filters
+            setTimeout(() => fetchResults(1, true), 0);
+          }
+        }}
       />
 
       {/* Remove Wishlist Confirmation Drawer */}

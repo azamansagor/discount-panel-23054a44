@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,20 +14,41 @@ interface SearchFiltersProps {
   isOpen: boolean;
   onClose: () => void;
   filters: SearchFiltersState;
-  onFiltersChange: (filters: SearchFiltersState) => void;
+  onApply: (filters: SearchFiltersState) => void;
 }
 
-const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFiltersProps) => {
+const SearchFilters = ({ isOpen, onClose, filters, onApply }: SearchFiltersProps) => {
+  // Local state for pending changes
+  const [localFilters, setLocalFilters] = useState<SearchFiltersState>(filters);
+
+  // Reset local filters when sheet opens
+  useEffect(() => {
+    if (isOpen) {
+      setLocalFilters(filters);
+    }
+  }, [isOpen, filters]);
+
   const handleReset = () => {
-    onFiltersChange({
+    setLocalFilters({
       type: "all",
       priceRange: "all",
       rating: "all",
     });
   };
 
+  const handleApply = () => {
+    onApply(localFilters);
+    onClose();
+  };
+
+  const handleClose = () => {
+    // Reset local filters to current applied filters on close without applying
+    setLocalFilters(filters);
+    onClose();
+  };
+
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
         <SheetHeader className="pb-4">
           <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-2" />
@@ -38,8 +60,8 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
           <div className="space-y-3">
             <Label className="text-base font-semibold">Type</Label>
             <RadioGroup
-              value={filters.type}
-              onValueChange={(value) => onFiltersChange({ ...filters, type: value as SearchFiltersState["type"] })}
+              value={localFilters.type}
+              onValueChange={(value) => setLocalFilters({ ...localFilters, type: value as SearchFiltersState["type"] })}
               className="flex flex-wrap gap-2"
             >
               {[
@@ -56,7 +78,7 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
                   <Label
                     htmlFor={`type-${option.value}`}
                     className={`px-4 py-2.5 rounded-xl cursor-pointer border transition-all ${
-                      filters.type === option.value
+                      localFilters.type === option.value
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-secondary border-border hover:bg-secondary/80"
                     }`}
@@ -72,8 +94,8 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
           <div className="space-y-3">
             <Label className="text-base font-semibold">Price Range</Label>
             <RadioGroup
-              value={filters.priceRange}
-              onValueChange={(value) => onFiltersChange({ ...filters, priceRange: value as SearchFiltersState["priceRange"] })}
+              value={localFilters.priceRange}
+              onValueChange={(value) => setLocalFilters({ ...localFilters, priceRange: value as SearchFiltersState["priceRange"] })}
               className="flex flex-wrap gap-2"
             >
               {[
@@ -91,7 +113,7 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
                   <Label
                     htmlFor={`price-${option.value}`}
                     className={`px-4 py-2.5 rounded-xl cursor-pointer border transition-all ${
-                      filters.priceRange === option.value
+                      localFilters.priceRange === option.value
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-secondary border-border hover:bg-secondary/80"
                     }`}
@@ -107,8 +129,8 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
           <div className="space-y-3">
             <Label className="text-base font-semibold">Minimum Rating</Label>
             <RadioGroup
-              value={filters.rating}
-              onValueChange={(value) => onFiltersChange({ ...filters, rating: value as SearchFiltersState["rating"] })}
+              value={localFilters.rating}
+              onValueChange={(value) => setLocalFilters({ ...localFilters, rating: value as SearchFiltersState["rating"] })}
               className="flex flex-wrap gap-2"
             >
               {[
@@ -126,7 +148,7 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
                   <Label
                     htmlFor={`rating-${option.value}`}
                     className={`px-4 py-2.5 rounded-xl cursor-pointer border transition-all ${
-                      filters.rating === option.value
+                      localFilters.rating === option.value
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-secondary border-border hover:bg-secondary/80"
                     }`}
@@ -150,7 +172,7 @@ const SearchFilters = ({ isOpen, onClose, filters, onFiltersChange }: SearchFilt
           </Button>
           <Button
             className="flex-1 h-14 rounded-xl text-base font-semibold"
-            onClick={onClose}
+            onClick={handleApply}
           >
             Apply Filters
           </Button>
