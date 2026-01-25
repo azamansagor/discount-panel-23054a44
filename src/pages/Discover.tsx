@@ -67,7 +67,12 @@ const Discover = () => {
   const [userLocation, setUserLocation] = useState<[number, number]>([23.8103, 90.4125]); // Default: Dhaka
   const [locationName, setLocationName] = useState("Getting location...");
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const suggestionsTimeoutRef = useRef<NodeJS.Timeout>();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Get user's current location
   useEffect(() => {
@@ -152,36 +157,115 @@ const Discover = () => {
     }
   };
 
+  // Fetch suggestions for dropdown
+  const fetchSuggestions = async (query: string) => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    try {
+      const [storesRes, productsRes] = await Promise.all([
+        fetch(`${API_ROOT}/stores`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ per_page: 5, page: 1, search: query }),
+        }),
+        fetch(`${API_ROOT}/products`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ per_page: 5, page: 1, search: query }),
+        }),
+      ]);
+
+      const storesData = await storesRes.json();
+      const productsData = await productsRes.json();
+
+      const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
+        id: store.id,
+        name: store.name,
+        type: 'store' as const,
+        address: store.address,
+        featured_image: store.banner_image,
+        latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
+        longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+      }));
+
+      const products: SearchResult[] = (productsData.data || []).map((product: any) => ({
+        id: product.id,
+        name: product.name,
+        type: 'product' as const,
+        address: product.store?.address,
+        featured_image: product.featured_image,
+        latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
+        longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+      }));
+
+      setSuggestions([...stores, ...products].slice(0, 8));
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  // Handle suggestion selection - zoom to location
+  const handleSuggestionSelect = (item: SearchResult) => {
+    setShowSuggestions(false);
+    setSearchQuery(item.name);
+    
+    if (item.latitude && item.longitude) {
+      setUserLocation([item.latitude, item.longitude]);
+      setMapZoom(18); // Zoom to street level
+      setTimeout(() => setMapZoom(undefined), 500);
+    }
+    
+    // Update results to show this item
+    setResults([item]);
+  };
+
   // Search with debounce
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    setShowSuggestions(true);
     
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
+    if (suggestionsTimeoutRef.current) {
+      clearTimeout(suggestionsTimeoutRef.current);
+    }
 
     if (!query.trim()) {
+      setSuggestions([]);
       fetchNearbyItems();
       return;
     }
 
+    // Fetch suggestions quickly
+    suggestionsTimeoutRef.current = setTimeout(() => {
+      fetchSuggestions(query);
+    }, 300);
+
+    // Full search with longer debounce
     searchTimeoutRef.current = setTimeout(async () => {
       setLoading(true);
       try {
-        // Search stores
-        const storesRes = await fetch(`${API_ROOT}/stores`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ per_page: 10, page: 1, search: query }),
-        });
-        const storesData = await storesRes.json();
+        const [storesRes, productsRes] = await Promise.all([
+          fetch(`${API_ROOT}/stores`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ per_page: 10, page: 1, search: query }),
+          }),
+          fetch(`${API_ROOT}/products`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ per_page: 10, page: 1, search: query }),
+          }),
+        ]);
 
-        // Search products
-        const productsRes = await fetch(`${API_ROOT}/products`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ per_page: 10, page: 1, search: query }),
-        });
+        const storesData = await storesRes.json();
         const productsData = await productsRes.json();
 
         const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
@@ -252,13 +336,74 @@ const Discover = () => {
             <Home className="w-5 h-5 text-foreground" />
           </button>
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground z-10" />
             <Input
+              ref={inputRef}
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => searchQuery && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
               placeholder="Search stores & products..."
               className="pl-10 bg-secondary border-0 rounded-xl"
             />
+            
+            {/* Search Suggestions Dropdown */}
+            {showSuggestions && (searchQuery.trim() || suggestionsLoading) && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg z-[1001] overflow-hidden max-h-80 overflow-y-auto">
+                {suggestionsLoading ? (
+                  <div className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+                    <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm">Searching...</span>
+                  </div>
+                ) : suggestions.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground text-sm">
+                    No suggestions found
+                  </div>
+                ) : (
+                  <ul className="py-2">
+                    {suggestions.map((item) => (
+                      <li key={`${item.type}-${item.id}`}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSuggestionSelect(item)}
+                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary transition-colors text-left"
+                        >
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                            {item.featured_image ? (
+                              <img
+                                src={item.featured_image}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = "/placeholder.svg";
+                                }}
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                {item.type === 'store' ? (
+                                  <Store className="w-5 h-5 text-muted-foreground" />
+                                ) : (
+                                  <Package className="w-5 h-5 text-muted-foreground" />
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-foreground font-medium truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              {item.address || 'Location available'}
+                            </p>
+                          </div>
+                          <Navigation className="w-4 h-4 text-primary shrink-0" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </motion.header>
