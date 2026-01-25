@@ -550,11 +550,17 @@ const Search = () => {
         onClose={() => setShowFilters(false)}
         filters={filters}
         onApply={(newFilters) => {
+          // Only fetch if filters actually changed
+          const filtersChanged = 
+            newFilters.type !== filters.type ||
+            newFilters.priceRange !== filters.priceRange ||
+            newFilters.rating !== filters.rating;
+          
           setFilters(newFilters);
-          if (searchQuery.length > 0) {
+          
+          if (filtersChanged && searchQuery.length > 0) {
             setPage(1);
             setHasMore(true);
-            // Pass new filters directly to avoid stale state
             fetchResults(1, true, newFilters);
           }
         }}
