@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Bell, MapPin, ChevronDown, Heart, Star, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bell, MapPin, ChevronDown, Heart, Star, ChevronRight, Loader2 } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
 import SearchBar from "@/components/home/SearchBar";
 import CategoryTabs from "@/components/home/CategoryTabs";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
@@ -27,6 +27,74 @@ interface BestOfferProduct {
 
 const Home = () => {
   const navigate = useNavigate();
+  const [locationName, setLocationName] = useState<string>("Getting location...");
+  const [locationLoading, setLocationLoading] = useState(true);
+
+  // Get user's current location using Geolocation API
+  const fetchLocation = useCallback(() => {
+    setLocationLoading(true);
+    
+    if (!navigator.geolocation) {
+      setLocationName("Location unavailable");
+      setLocationLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        
+        try {
+          // Reverse geocode to get location name
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          );
+          const data = await response.json();
+          
+          if (data.address) {
+            const { city, town, village, suburb, neighbourhood, state, country } = data.address;
+            const locationStr = city || town || village || suburb || neighbourhood || "Unknown";
+            const regionStr = state || country || "";
+            setLocationName(regionStr ? `${locationStr}, ${regionStr}` : locationStr);
+          } else {
+            setLocationName("Current Location");
+          }
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+          setLocationName("Current Location");
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationName("Location permission denied");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationName("Location unavailable");
+            break;
+          case error.TIMEOUT:
+            setLocationName("Location request timed out");
+            break;
+          default:
+            setLocationName("Location unavailable");
+        }
+        setLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000, // Cache for 5 minutes
+      }
+    );
+  }, []);
+
+  // Fetch location on mount
+  useEffect(() => {
+    fetchLocation();
+  }, [fetchLocation]);
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -40,9 +108,18 @@ const Home = () => {
           {/* Location Selector */}
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">Location</p>
-            <button className="flex items-center gap-1">
-              <MapPin className="w-4 h-4 text-primary" />
-              <span className="text-sm font-semibold text-foreground">New York, USA</span>
+            <button 
+              onClick={fetchLocation}
+              className="flex items-center gap-1"
+            >
+              {locationLoading ? (
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              ) : (
+                <MapPin className="w-4 h-4 text-primary" />
+              )}
+              <span className="text-sm font-semibold text-foreground max-w-[180px] truncate">
+                {locationName}
+              </span>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
