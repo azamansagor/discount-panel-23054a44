@@ -39,16 +39,16 @@ const Home = () => {
         <div className="flex items-center justify-between px-4 py-3">
           {/* Location Selector */}
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Delivery To</p>
+            <p className="text-xs text-muted-foreground mb-0.5">Location</p>
             <button className="flex items-center gap-1">
               <MapPin className="w-4 h-4 text-primary" />
               <span className="text-sm font-semibold text-foreground">New York, USA</span>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
-          
+
           {/* Notification Button */}
-          <button 
+          <button
             onClick={() => navigate("/notifications")}
             className="relative w-10 h-10 bg-card border border-border rounded-full flex items-center justify-center"
           >
@@ -139,12 +139,12 @@ const BestOffers = () => {
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
-      
+
       <div className="px-4 grid grid-cols-2 gap-3">
         {products.map((product) => {
           const discount = product.discounts?.[0] ? Math.round(parseFloat(product.discounts[0].amount)) : 0;
           const price = parseFloat(product.price);
-          
+
           return (
             <motion.div
               key={product.id}
@@ -166,31 +166,35 @@ const BestOffers = () => {
                     <span className="text-[10px] font-bold text-accent-foreground">{discount}% OFF</span>
                   </div>
                 )}
-                <button 
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleWishlist('product', product.id, {
+                    toggleWishlist("product", product.id, {
                       id: product.id,
                       name: product.name,
                       price: product.price,
                       featured_image: product.featured_image,
                       store: product.store ? { id: 0, name: product.store.name } : undefined,
-                      discounts: product.discounts?.map(d => ({ id: 0, discount_type: 'percentage', amount: d.amount })),
+                      discounts: product.discounts?.map((d) => ({
+                        id: 0,
+                        discount_type: "percentage",
+                        amount: d.amount,
+                      })),
                     });
                   }}
                   className="absolute top-2 right-2 w-7 h-7 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
                 >
-                  <Heart className={`w-4 h-4 transition-colors ${isInWishlist('product', product.id) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
+                  <Heart
+                    className={`w-4 h-4 transition-colors ${isInWishlist("product", product.id) ? "fill-destructive text-destructive" : "text-muted-foreground"}`}
+                  />
                 </button>
               </div>
               <div className="p-2.5">
                 <div className="flex items-center gap-1 text-muted-foreground mb-0.5">
                   <MapPin className="w-3 h-3" />
-                  <p className="text-[10px] truncate">{product.store?.address || 'Location available'}</p>
+                  <p className="text-[10px] truncate">{product.store?.address || "Location available"}</p>
                 </div>
-                <h3 className="text-xs font-semibold text-foreground line-clamp-1 mb-1">
-                  {product.name}
-                </h3>
+                <h3 className="text-xs font-semibold text-foreground line-clamp-1 mb-1">{product.name}</h3>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-warning text-warning" />
