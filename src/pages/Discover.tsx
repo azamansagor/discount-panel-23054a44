@@ -45,11 +45,15 @@ const createPriceMarker = (name: string, type: 'store' | 'product') => {
 };
 
 // Component to handle map center updates
-const MapCenterUpdater = ({ center }: { center: [number, number] }) => {
+const MapCenterUpdater = ({ center, zoom }: { center: [number, number]; zoom?: number }) => {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, map.getZoom());
-  }, [center, map]);
+    if (zoom !== undefined) {
+      map.setView(center, zoom);
+    } else {
+      map.setView(center, map.getZoom());
+    }
+  }, [center, zoom, map]);
   return null;
 };
 
@@ -62,6 +66,7 @@ const Discover = () => {
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number]>([23.8103, 90.4125]); // Default: Dhaka
   const [locationName, setLocationName] = useState("Getting location...");
+  const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Get user's current location
@@ -299,7 +304,7 @@ const Discover = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapCenterUpdater center={userLocation} />
+          <MapCenterUpdater center={userLocation} zoom={mapZoom} />
           
           {/* User location marker */}
           <Marker 
@@ -346,6 +351,9 @@ const Discover = () => {
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition((pos) => {
                 setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+                setMapZoom(18); // Zoom to street level (closest view)
+                // Reset zoom state after a short delay so future center updates don't force zoom
+                setTimeout(() => setMapZoom(undefined), 500);
               });
             }
           }}
