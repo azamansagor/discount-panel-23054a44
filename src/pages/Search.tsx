@@ -64,13 +64,20 @@ const Search = () => {
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Auto-focus search input on mount
+  // Auto-focus search input or open filters on mount based on query params
   useEffect(() => {
-    // Small delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      searchInputRef.current?.focus();
-    }, 100);
-    return () => clearTimeout(timer);
+    const shouldOpenFilters = searchParams.get("openFilters") === "true";
+    
+    if (shouldOpenFilters) {
+      // Open filters sheet
+      setShowFilters(true);
+    } else {
+      // Focus search input
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   // Fetch suggestions
