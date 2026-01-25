@@ -241,7 +241,13 @@ const Discover = () => {
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <button 
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate('/home');
+              }
+            }}
             className="p-2 bg-secondary rounded-xl"
           >
             <ChevronLeft className="w-5 h-5 text-foreground" />
@@ -441,8 +447,8 @@ const Discover = () => {
         </div>
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="flex-shrink-0">
+      {/* Bottom Navigation - fixed at bottom */}
+      <div className="flex-shrink-0 relative z-[1001]">
         <TabBar />
       </div>
     </div>
