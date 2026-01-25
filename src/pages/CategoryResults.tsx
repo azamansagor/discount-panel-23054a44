@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Heart, Search, MapPin, Clock, Tag } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useDebounce } from "@/hooks/useDebounce";
+import SearchSuggestions from "@/components/search/SearchSuggestions";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -47,9 +48,79 @@ const CategoryResults = () => {
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
+  const [suggestions, setSuggestions] = useState<{ id: number; name: string; type: "store" | "product" }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch suggestions when debounced query changes
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      if (debouncedSearchQuery.length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      setLoadingSuggestions(true);
+      setShowSuggestions(true);
+
+      try {
+        const response = await fetch(`${API_ROOT}/categories/get_products_stores`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            category_id: Number(categoryId),
+            type: filter,
+            per_page: 5,
+            page: 1,
+            search: debouncedSearchQuery,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const mappedSuggestions = (data.items || []).map((item: any) => ({
+            id: item.id,
+            name: item.name || item.title,
+            type: item.type || "product",
+          }));
+          setSuggestions(mappedSuggestions);
+        }
+      } catch (error) {
+        console.error("Error fetching suggestions:", error);
+        setSuggestions([]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+  }, [debouncedSearchQuery, categoryId, filter]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSuggestionSelect = (suggestion: { id: number; name: string; type: "store" | "product" }) => {
+    setSearchQuery(suggestion.name);
+    setShowSuggestions(false);
+  };
 
   const fetchItems = useCallback(async (pageNum: number, filterType: FilterType, reset = false) => {
     if (reset) {
@@ -211,16 +282,28 @@ const CategoryResults = () => {
         </div>
 
         {/* Search Bar */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4" ref={searchContainerRef}>
           <div className="relative">
             <Input
               type="text"
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => {
+                if (searchQuery.length >= 2 && suggestions.length > 0) {
+                  setShowSuggestions(true);
+                }
+              }}
               className="w-full h-12 pl-4 pr-12 rounded-xl bg-secondary/50 border-0 text-foreground placeholder:text-muted-foreground"
             />
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            
+            <SearchSuggestions
+              suggestions={suggestions}
+              isVisible={showSuggestions}
+              isLoading={loadingSuggestions}
+              onSelect={handleSuggestionSelect}
+            />
           </div>
         </div>
       </div>
