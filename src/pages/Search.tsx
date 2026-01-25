@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Heart, Search as SearchIcon, MapPin, SlidersHorizontal, X, Store, Package, Navigation } from "lucide-react";
+import { ArrowLeft, Heart, Search as SearchIcon, MapPin, SlidersHorizontal, X, Store, Package, Navigation, Map } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import TabBar from "@/components/layout/TabBar";
@@ -467,6 +467,21 @@ const Search = () => {
                 </button>
               </span>
             )}
+          </div>
+        )}
+
+        {/* View on Map Button */}
+        {results.length > 0 && (
+          <div className="px-4 pb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/discover?q=${encodeURIComponent(searchQuery)}`)}
+              className="gap-2"
+            >
+              <Map className="h-4 w-4" />
+              View on Map
+            </Button>
           </div>
         )}
       </div>
