@@ -644,10 +644,10 @@ export default function StoreDetail() {
         {/* Social Links */}
         {(() => {
           const contacts = store.social_contacts ?? [];
-          const facebookUrl = contacts.find((c) => c.type?.toLowerCase().includes("facebook"))?.value;
-          const instagramUrl = contacts.find((c) => c.type?.toLowerCase().includes("instagram"))?.value;
+          const facebookUrl = contacts.find((c) => c.type?.toLowerCase()?.includes("facebook"))?.value;
+          const instagramUrl = contacts.find((c) => c.type?.toLowerCase()?.includes("instagram"))?.value;
           const twitterUrl = contacts.find((c) => {
-            const t = c.type?.toLowerCase();
+            const t = c.type?.toLowerCase() ?? "";
             return t.includes("twitter") || t.includes("x.com") || t === "x";
           })?.value;
           const websiteUrl = store.website;
