@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowLeft, Search, Heart, MapPin, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, Heart, MapPin, Tag, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -101,7 +101,9 @@ const Wishlist = () => {
   const getDiscount = (item?: ProductData) => {
     if (item?.discounts && item.discounts.length > 0) {
       const discount = item.discounts[0];
-      return parseFloat(discount.amount);
+      return discount.discount_type === 'percentage' 
+        ? `${parseFloat(discount.amount)}%` 
+        : `৳${discount.amount}`;
     }
     return null;
   };
@@ -194,13 +196,14 @@ const Wishlist = () => {
         onScroll={handleScroll}
       >
         {isLoading && displayItems.length === 0 ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="bg-card rounded-2xl overflow-hidden border border-border">
-                <Skeleton className="aspect-[16/10] w-full" />
-                <div className="p-3.5">
+                <Skeleton className="aspect-square w-full" />
+                <div className="p-3">
                   <Skeleton className="h-5 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-1/2 mb-2" />
+                  <Skeleton className="h-4 w-1/3" />
                 </div>
               </div>
             ))}
@@ -224,14 +227,13 @@ const Wishlist = () => {
             </button>
           </motion.div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
             {displayItems.map((wishlistItem, index) => {
               const itemData = getItemData(wishlistItem);
               const discount = getDiscount(itemData);
               const isProduct = wishlistItem.type === 'product';
               const imageUrl = isProduct ? itemData?.featured_image : itemData?.banner_image;
               const isFetching = fetchingIds.has(`${wishlistItem.type}:${wishlistItem.item_id}`);
-              const price = itemData?.price ? parseFloat(itemData.price) : 0;
 
               return (
                 <motion.div
@@ -240,10 +242,10 @@ const Wishlist = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   onClick={() => itemData && navigate(isProduct ? `/product/${wishlistItem.item_id}` : `/store/${wishlistItem.item_id}`)}
-                  className="bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  className="bg-card rounded-2xl overflow-hidden border border-border shadow-sm hover:shadow-md transition-all cursor-pointer group"
                 >
                   {/* Image Container */}
-                  <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                  <div className="relative aspect-square overflow-hidden bg-muted">
                     {isFetching ? (
                       <div className="w-full h-full flex items-center justify-center">
                         <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
@@ -252,65 +254,66 @@ const Wishlist = () => {
                       <img
                         src={imageUrl || "/placeholder.svg"}
                         alt={itemData?.name || "Item"}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = "/placeholder.svg";
-                        }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     )}
                     
                     {/* Discount Badge */}
-                    {discount && discount > 0 && (
-                      <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
-                        {Math.round(discount)}% OFF
+                    {discount && (
+                      <div className="absolute top-2 left-2 bg-accent text-accent-foreground px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1">
+                        <Tag className="w-3 h-3" />
+                        {discount} OFF
                       </div>
                     )}
 
                     {/* Heart Button */}
                     <button
                       onClick={(e) => handleRemoveClick(e, wishlistItem.type, wishlistItem.item_id, itemData || null)}
-                      className="absolute top-3 right-3 w-8 h-8 bg-foreground/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                      className="absolute top-2 right-2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-md hover:bg-white transition-colors"
                     >
                       <Heart className="w-4 h-4 text-destructive fill-destructive" />
                     </button>
                   </div>
 
-                  {/* Content with curved top */}
-                  <div className="relative bg-card -mt-5 pt-2 px-3.5 pb-3.5" style={{ borderRadius: '20px 20px 0 0' }}>
+                  {/* Content */}
+                  <div className="p-3">
                     {isFetching ? (
                       <>
-                        <Skeleton className="h-4 w-1/3 mb-2" />
                         <Skeleton className="h-5 w-3/4 mb-2" />
-                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-4 w-1/2 mb-2" />
+                        <Skeleton className="h-4 w-1/3" />
                       </>
                     ) : (
                       <>
-                        {/* Time & Distance */}
-                        <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
-                          <Clock className="h-3 w-3" />
-                          <span>25-30 mins</span>
-                          <span>·</span>
-                          <span>4.4 km</span>
-                        </div>
-
-                        <h3 className="font-bold text-foreground text-sm line-clamp-1 mb-1.5">
+                        <h3 className="font-semibold text-foreground text-sm line-clamp-2 mb-1">
                           {itemData?.name || "Loading..."}
                         </h3>
                         
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-muted-foreground text-xs">
+                        {isProduct && itemData?.store && (
+                          <div className="flex items-center gap-1 text-muted-foreground text-xs mb-2">
                             <MapPin className="w-3 h-3" />
-                            <span className="truncate max-w-[120px]">
-                              {isProduct ? itemData?.store?.name : itemData?.address || "Location"}
-                            </span>
+                            <span className="truncate">{itemData.store.name}</span>
                           </div>
-                          
-                          {isProduct && price > 0 && (
-                            <span className="text-sm font-bold text-primary">
-                              ${price.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
+                        )}
+
+                        {isProduct && itemData?.price && (
+                          <div className="flex items-center gap-1 text-primary font-bold text-sm">
+                            ৳{parseFloat(itemData.price).toLocaleString()}
+                          </div>
+                        )}
+
+                        {/* View Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (itemData) {
+                              navigate(isProduct ? `/product/${wishlistItem.item_id}` : `/store/${wishlistItem.item_id}`);
+                            }
+                          }}
+                          className="w-full mt-3 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
+                        >
+                          View {isProduct ? "Product" : "Store"}
+                        </button>
                       </>
                     )}
                   </div>

@@ -47,6 +47,7 @@ const Explore = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
   const [suggestions, setSuggestions] = useState<{ id: number; name: string; type: "store" | "product" }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -164,6 +165,7 @@ const Explore = () => {
         // Calculate price and discount
         const price = parseFloat(item.price) || 0;
         const discountAmount = item.discounts?.[0]?.amount ? parseFloat(item.discounts[0].amount) : 0;
+        const originalPrice = discountAmount > 0 ? price / (1 - discountAmount / 100) : price;
 
         // Extract tags/features
         const tags: string[] = [];
@@ -181,6 +183,7 @@ const Explore = () => {
           type: item.type || (item.featured_image ? "product" : "store"),
           location: item.location || item.address || "Location not specified",
           price,
+          originalPrice: discountAmount > 0 ? originalPrice : undefined,
           discount: discountAmount > 0 ? Math.round(discountAmount) : undefined,
           tags,
           distance: item.distance || "4.4 km",
@@ -270,6 +273,10 @@ const Explore = () => {
     setItemToRemove(null);
   };
 
+  const handleImageDot = (itemKey: string, index: number) => {
+    setActiveImageIndex(prev => ({ ...prev, [itemKey]: index }));
+  };
+
   const filteredItems = items.filter(item => 
     searchQuery === "" || item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -350,9 +357,10 @@ const Explore = () => {
                 <div className="aspect-[16/10] bg-secondary animate-pulse" />
                 <div className="p-4 space-y-3">
                   <div className="h-5 bg-secondary rounded animate-pulse w-3/4" />
-                  <div className="flex justify-between">
-                    <div className="h-4 bg-secondary rounded animate-pulse w-1/2" />
-                    <div className="h-5 bg-secondary rounded animate-pulse w-20" />
+                  <div className="h-4 bg-secondary rounded animate-pulse w-1/2" />
+                  <div className="flex gap-2">
+                    <div className="h-8 bg-secondary rounded-lg animate-pulse w-24" />
+                    <div className="h-8 bg-secondary rounded-lg animate-pulse w-24" />
                   </div>
                 </div>
               </div>
@@ -370,7 +378,7 @@ const Explore = () => {
           <AnimatePresence mode="popLayout">
             {filteredItems.map((item, index) => {
               const itemKey = `${item.type}-${item.id}`;
-              const inWishlist = isInWishlist(item.type as 'product' | 'store', item.id);
+              const currentImageIndex = activeImageIndex[itemKey] || 0;
               
               return (
                 <motion.div
@@ -391,7 +399,7 @@ const Explore = () => {
                   {/* Image Section */}
                   <div className="relative aspect-[16/10]">
                     <img
-                      src={item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : "/placeholder.svg"}
+                      src={item.images[currentImageIndex] ? `${STORAGE_URL}/${item.images[currentImageIndex]}` : "/placeholder.svg"}
                       alt={item.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -401,7 +409,7 @@ const Explore = () => {
 
                     {/* Discount Badge */}
                     {item.discount && item.discount > 0 && (
-                      <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
+                      <div className="absolute top-4 left-4 bg-accent text-accent-foreground px-3 py-1.5 rounded-lg text-sm font-semibold shadow-lg">
                         {item.discount}% OFF
                       </div>
                     )}
@@ -412,54 +420,61 @@ const Explore = () => {
                         e.stopPropagation();
                         handleWishlistToggle(item);
                       }}
-                      className="absolute top-3 right-3 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
                     >
                       <Heart
                         className={`h-5 w-5 transition-colors ${
-                          inWishlist
+                          isInWishlist(item.type as 'product' | 'store', item.id)
                             ? "fill-destructive text-destructive"
                             : "text-white"
                         }`}
                       />
                     </button>
-                  </div>
 
-                  {/* Content Section with curved top */}
-                  <div className="relative bg-card -mt-6 pt-2 px-4 pb-4" style={{ borderRadius: '24px 24px 0 0' }}>
-                    {/* Time & Distance Info - at top of curved section */}
-                    <div className="flex items-center gap-1.5 text-muted-foreground text-sm mb-3">
+                    {/* Time & Distance Info */}
+                    <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium">
                       <Clock className="h-4 w-4" />
                       <span>{item.deliveryTime}</span>
-                      <span>·</span>
+                      <span className="mx-1">.</span>
                       <span>{item.distance}</span>
                     </div>
 
                     {/* Image Dots */}
-                    {item.images && item.images.length > 1 && (
-                      <div className="absolute top-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                    {item.images.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
                         {item.images.slice(0, 5).map((_, idx) => (
-                          <div
+                          <button
                             key={idx}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleImageDot(itemKey, idx);
+                            }}
                             className={`w-2 h-2 rounded-full transition-all ${
-                              idx === 0 ? "bg-primary w-4" : "bg-muted-foreground/40"
+                              currentImageIndex === idx 
+                                ? "bg-white w-4" 
+                                : "bg-white/50"
                             }`}
                           />
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  {/* Content Section */}
+                  <div className="p-4">
                     {/* Title */}
-                    <h3 className="font-bold text-foreground text-lg line-clamp-1 mb-2">
+                    <h3 className="font-bold text-foreground text-lg line-clamp-1 mb-1">
                       {item.name}
                     </h3>
 
                     {/* Location & Price Row */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                        <MapPin className="h-4 w-4 flex-shrink-0" />
+                        <MapPin className="h-4 w-4" />
                         <span className="line-clamp-1">{item.location}</span>
                       </div>
                       {item.price !== undefined && item.price > 0 && (
-                        <span className="text-primary font-bold text-lg">
+                        <span className="text-accent font-bold text-lg">
                           ${item.price.toLocaleString()}
                         </span>
                       )}
