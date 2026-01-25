@@ -373,47 +373,52 @@ const Discover = () => {
                   </div>
                 ) : (
                   <ul className="py-2">
-                    {suggestions.map((item) => (
-                      <li key={`${item.type}-${item.id}`}>
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleSuggestionSelect(item)}
-                          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary transition-colors text-left"
-                        >
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
-                            {item.featured_image ? (
-                              <img
-                                src={item.featured_image}
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                                onError={(e) => {
-                                  e.currentTarget.src = "/placeholder.svg";
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                {item.type === 'store' ? (
-                                  <Store className="w-5 h-5 text-muted-foreground" />
-                                ) : (
-                                  <Package className="w-5 h-5 text-muted-foreground" />
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-foreground font-medium truncate">{item.name}</p>
-                            <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                              <MapPin className="w-3 h-3 flex-shrink-0" />
-                              {item.address || 'No address'}
-                            </p>
-                          </div>
-                          {hasValidCoordinates(item) && (
+                    {suggestions
+                      .filter((item) => hasValidCoordinates(item))
+                      .map((item) => (
+                        <li key={`${item.type}-${item.id}`}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => handleSuggestionSelect(item)}
+                            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-secondary transition-colors text-left"
+                          >
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                              {item.featured_image ? (
+                                <img
+                                  src={item.featured_image}
+                                  alt={item.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.src = "/placeholder.svg";
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  {item.type === 'store' ? (
+                                    <Store className="w-5 h-5 text-muted-foreground" />
+                                  ) : (
+                                    <Package className="w-5 h-5 text-muted-foreground" />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-foreground font-medium truncate">{item.name}</p>
+                              <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                <MapPin className="w-3 h-3 flex-shrink-0" />
+                                {item.address || 'No address'}
+                              </p>
+                            </div>
                             <Navigation className="w-4 h-4 text-primary shrink-0" />
-                          )}
-                        </button>
+                          </button>
+                        </li>
+                      ))}
+                    {suggestions.filter((item) => hasValidCoordinates(item)).length === 0 && (
+                      <li className="px-4 py-3 text-center text-muted-foreground text-sm">
+                        No locations with coordinates found
                       </li>
-                    ))}
+                    )}
                   </ul>
                 )}
               </div>
