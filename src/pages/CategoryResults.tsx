@@ -48,7 +48,6 @@ const CategoryResults = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
   const [suggestions, setSuggestions] = useState<{ id: number; name: string; type: "store" | "product" }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
@@ -168,7 +167,6 @@ const CategoryResults = () => {
         // Calculate price and discount
         const price = parseFloat(item.price) || 0;
         const discountAmount = item.discounts?.[0]?.amount ? parseFloat(item.discounts[0].amount) : 0;
-        const originalPrice = discountAmount > 0 ? price / (1 - discountAmount / 100) : price;
 
         // Extract tags/features
         const tags: string[] = [];
@@ -186,7 +184,6 @@ const CategoryResults = () => {
           type: item.type || (item.featured_image ? "product" : "store"),
           location: item.location || item.address || "Location not specified",
           price,
-          originalPrice: discountAmount > 0 ? originalPrice : undefined,
           discount: discountAmount > 0 ? Math.round(discountAmount) : undefined,
           tags,
           distance: item.distance || "4.4 km",
@@ -246,11 +243,9 @@ const CategoryResults = () => {
     const inWishlist = isInWishlist(type, item.id);
     
     if (inWishlist) {
-      // Show confirmation drawer for removal
       setItemToRemove(item);
       setRemoveDrawerOpen(true);
     } else {
-      // Add directly without confirmation
       toggleWishlist(type, item.id, {
         id: item.id,
         name: item.name,
@@ -276,10 +271,6 @@ const CategoryResults = () => {
     }
     setRemoveDrawerOpen(false);
     setItemToRemove(null);
-  };
-
-  const handleImageDot = (itemKey: string, index: number) => {
-    setActiveImageIndex(prev => ({ ...prev, [itemKey]: index }));
   };
 
   const filteredItems = items.filter(item => 
@@ -362,10 +353,9 @@ const CategoryResults = () => {
                 <div className="aspect-[16/10] bg-secondary animate-pulse" />
                 <div className="p-4 space-y-3">
                   <div className="h-5 bg-secondary rounded animate-pulse w-3/4" />
-                  <div className="h-4 bg-secondary rounded animate-pulse w-1/2" />
-                  <div className="flex gap-2">
-                    <div className="h-8 bg-secondary rounded-lg animate-pulse w-24" />
-                    <div className="h-8 bg-secondary rounded-lg animate-pulse w-24" />
+                  <div className="flex justify-between">
+                    <div className="h-4 bg-secondary rounded animate-pulse w-1/2" />
+                    <div className="h-5 bg-secondary rounded animate-pulse w-20" />
                   </div>
                 </div>
               </div>
@@ -383,7 +373,7 @@ const CategoryResults = () => {
           <AnimatePresence mode="popLayout">
             {filteredItems.map((item, index) => {
               const itemKey = `${item.type}-${item.id}`;
-              const currentImageIndex = activeImageIndex[itemKey] || 0;
+              const inWishlist = isInWishlist(item.type as 'product' | 'store', item.id);
               
               return (
                 <motion.div
@@ -404,7 +394,7 @@ const CategoryResults = () => {
                   {/* Image Section */}
                   <div className="relative aspect-[16/10]">
                     <img
-                      src={item.images[currentImageIndex] ? `${STORAGE_URL}/${item.images[currentImageIndex]}` : "/placeholder.svg"}
+                      src={item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : "/placeholder.svg"}
                       alt={item.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
@@ -414,7 +404,7 @@ const CategoryResults = () => {
 
                     {/* Discount Badge */}
                     {item.discount && item.discount > 0 && (
-                      <div className="absolute top-4 left-4 bg-accent text-accent-foreground px-3 py-1.5 rounded-lg text-sm font-semibold shadow-lg">
+                      <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
                         {item.discount}% OFF
                       </div>
                     )}
@@ -425,11 +415,11 @@ const CategoryResults = () => {
                         e.stopPropagation();
                         handleWishlistToggle(item);
                       }}
-                      className="absolute top-4 right-4 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
+                      className="absolute top-3 right-3 w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center transition-all hover:scale-110"
                     >
                       <Heart
                         className={`h-5 w-5 transition-colors ${
-                          isInWishlist(item.type as 'product' | 'store', item.id)
+                          inWishlist
                             ? "fill-destructive text-destructive"
                             : "text-white"
                         }`}
@@ -437,49 +427,29 @@ const CategoryResults = () => {
                     </button>
 
                     {/* Time & Distance Info */}
-                    <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium">
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
                       <Clock className="h-4 w-4" />
                       <span>{item.deliveryTime}</span>
-                      <span className="mx-1">.</span>
+                      <span>·</span>
                       <span>{item.distance}</span>
                     </div>
-
-                    {/* Image Dots */}
-                    {item.images.length > 1 && (
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
-                        {item.images.slice(0, 5).map((_, idx) => (
-                          <button
-                            key={idx}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleImageDot(itemKey, idx);
-                            }}
-                            className={`w-2 h-2 rounded-full transition-all ${
-                              currentImageIndex === idx 
-                                ? "bg-white w-4" 
-                                : "bg-white/50"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* Content Section */}
                   <div className="p-4">
                     {/* Title */}
-                    <h3 className="font-bold text-foreground text-lg line-clamp-1 mb-1">
+                    <h3 className="font-bold text-foreground text-lg line-clamp-1 mb-2">
                       {item.name}
                     </h3>
 
                     {/* Location & Price Row */}
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                        <MapPin className="h-4 w-4" />
+                        <MapPin className="h-4 w-4 flex-shrink-0" />
                         <span className="line-clamp-1">{item.location}</span>
                       </div>
                       {item.price !== undefined && item.price > 0 && (
-                        <span className="text-accent font-bold text-lg">
+                        <span className="text-primary font-bold text-lg">
                           ${item.price.toLocaleString()}
                         </span>
                       )}

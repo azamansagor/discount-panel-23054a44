@@ -24,7 +24,8 @@ interface Store {
   image: string;
   category: string;
   location: string;
-  price: string;
+  distance: string;
+  deliveryTime: string;
 }
 
 const API_ROOT = "https://discountpanel.shop/api";
@@ -53,7 +54,8 @@ const fetchStores = async (): Promise<Store[]> => {
     image: store.banner_image,
     category: store.categories?.[0]?.name || "General",
     location: store.address || "Location not available",
-    price: "$" + (Math.floor(Math.random() * 3000) + 500) + "/Monthly",
+    distance: "4.4 km",
+    deliveryTime: "25-30 mins",
   }));
 };
 
@@ -78,12 +80,13 @@ export const NearbyStores = () => {
         </div>
         <div className="space-y-3">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex gap-3 p-3 bg-card rounded-2xl border border-border">
-              <div className="w-20 h-20 bg-secondary rounded-xl animate-pulse" />
-              <div className="flex-1 space-y-2">
+            <div key={i} className="bg-card rounded-2xl overflow-hidden border border-border">
+              <div className="aspect-[16/10] bg-secondary animate-pulse" />
+              <div className="p-3.5 space-y-2">
                 <div className="w-3/4 h-4 bg-secondary rounded animate-pulse" />
-                <div className="w-1/2 h-3 bg-secondary rounded animate-pulse" />
-                <div className="w-2/3 h-3 bg-secondary rounded animate-pulse" />
+                <div className="flex justify-between">
+                  <div className="w-1/2 h-3 bg-secondary rounded animate-pulse" />
+                </div>
               </div>
             </div>
           ))}
@@ -96,67 +99,85 @@ export const NearbyStores = () => {
     <div className="px-4 py-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-foreground">Near By Locations</h2>
-        <button className="flex items-center gap-1 text-primary font-medium text-sm">
+        <button 
+          onClick={() => navigate("/explore")}
+          className="flex items-center gap-1 text-primary font-medium text-sm"
+        >
           See all
           <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="space-y-3">
-        {stores.map((store, index) => (
-          <motion.div
-            key={store.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate(`/store/${store.id}`)}
-            className="flex gap-3 p-3 bg-card rounded-2xl border border-border shadow-sm cursor-pointer"
-          >
-            {/* Store Image */}
-            <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
-              <img
-                src={store.image || "/placeholder.svg"}
-                alt={store.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = "/placeholder.svg";
-                }}
-              />
-              {/* Wishlist Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleWishlist('store', parseInt(store.id), {
-                    id: parseInt(store.id),
-                    name: store.name,
-                    banner_image: store.image,
-                  });
-                }}
-                className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
-              >
-                <Heart className={`w-3 h-3 transition-colors ${isInWishlist('store', parseInt(store.id)) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
-              </button>
-            </div>
+      <div className="space-y-4">
+        {stores.map((store, index) => {
+          const inWishlist = isInWishlist('store', parseInt(store.id));
+          
+          return (
+            <motion.div
+              key={store.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate(`/store/${store.id}`)}
+              className="bg-card rounded-2xl overflow-hidden border border-border shadow-sm cursor-pointer"
+            >
+              {/* Image Container */}
+              <div className="relative aspect-[16/10]">
+                <img
+                  src={store.image || "/placeholder.svg"}
+                  alt={store.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+                
+                {/* Category Badge */}
+                <div className="absolute top-3 left-3 bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
+                  {store.category}
+                </div>
+                
+                {/* Wishlist Button */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleWishlist('store', parseInt(store.id), {
+                      id: parseInt(store.id),
+                      name: store.name,
+                      banner_image: store.image,
+                    });
+                  }}
+                  className="absolute top-3 right-3 w-8 h-8 bg-foreground/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:scale-110 transition-transform"
+                >
+                  <Heart className={`w-4 h-4 transition-colors ${inWishlist ? 'fill-destructive text-destructive' : 'text-white'}`} />
+                </button>
 
-            {/* Store Info */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <h3 className="font-semibold text-foreground text-sm mb-1 truncate">
-                {store.name}
-              </h3>
-              
-              <div className="flex items-center gap-1 text-muted-foreground mb-1">
-                <MapPin className="w-3 h-3 flex-shrink-0" />
-                <span className="text-xs truncate">{store.location}</span>
+                {/* Time & Distance */}
+                <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <Clock className="h-3 w-3" />
+                  <span>{store.deliveryTime}</span>
+                  <span>·</span>
+                  <span>{store.distance}</span>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-1 text-primary">
-                <Clock className="w-3 h-3" />
-                <span className="text-xs font-semibold">{store.price}</span>
+
+              {/* Content */}
+              <div className="p-3.5">
+                {/* Name */}
+                <h3 className="text-sm font-bold text-foreground line-clamp-1 mb-1.5">
+                  {store.name}
+                </h3>
+
+                {/* Location */}
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  <span className="text-xs truncate">{store.location}</span>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
