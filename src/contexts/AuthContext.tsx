@@ -11,7 +11,6 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithToken: (token: string, userData: Omit<User, 'token'>) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -80,15 +79,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const loginWithToken = (token: string, userData: Omit<User, 'token'>) => {
-    const fullUser: User = {
-      ...userData,
-      token,
-    };
-    setUser(fullUser);
-    localStorage.setItem('auth_user', JSON.stringify(fullUser));
-  };
-
   const logout = () => {
     setUser(null);
     localStorage.removeItem('auth_user');
@@ -99,7 +89,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       user, 
       isLoading, 
       login, 
-      loginWithToken,
       logout, 
       isAuthenticated: !!user 
     }}>

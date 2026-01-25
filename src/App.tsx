@@ -15,7 +15,6 @@ import StoreDetail from "./pages/StoreDetail";
 import ProductDetail from "./pages/ProductDetail";
 import Notifications from "./pages/Notifications";
 import Login from "./pages/Login";
-import AuthCallback from "./pages/AuthCallback";
 import Wishlist from "./pages/Wishlist";
 
 const queryClient = new QueryClient();
@@ -34,7 +33,6 @@ const App = () => (
               <Route path="/discover" element={<Discover />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/category/:categoryId/:categoryName?" element={<CategoryResults />} />
               <Route path="/store/:storeId" element={<StoreDetail />} />
