@@ -12,6 +12,38 @@ import "leaflet/dist/leaflet.css";
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_ROOT = "https://discountpanel.shop/storage/";
 
+// Cache for geocoded locations to avoid repeated API calls
+const geocodeCache: Record<string, { lat: number; lon: number } | null> = {};
+
+// Geocode a location string using Nominatim
+const geocodeLocation = async (locationName: string): Promise<{ lat: number; lon: number } | null> => {
+  if (!locationName?.trim()) return null;
+  
+  const cacheKey = locationName.toLowerCase().trim();
+  if (cacheKey in geocodeCache) {
+    return geocodeCache[cacheKey];
+  }
+
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`
+    );
+    const data = await response.json();
+    
+    if (data && data.length > 0) {
+      const result = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      geocodeCache[cacheKey] = result;
+      return result;
+    }
+    
+    geocodeCache[cacheKey] = null;
+    return null;
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+};
+
 interface SearchResult {
   id: number;
   name: string;
@@ -22,9 +54,11 @@ interface SearchResult {
   latitude?: number;
   longitude?: number;
   featured_image?: string;
+  locationName?: string; // For geocoding fallback
   store?: {
     name: string;
     address: string;
+    location_name?: string;
   };
 }
 
@@ -124,31 +158,63 @@ const Discover = () => {
       });
       const productsData = await productsRes.json();
 
-      // Use real coordinates from API if available
-      const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
-        id: store.id,
-        name: store.name,
-        type: 'store' as const,
-        address: store.address,
-        featured_image: store.banner_image,
-        latitude: store.latitude ? parseFloat(store.latitude) : undefined,
-        longitude: store.longitude ? parseFloat(store.longitude) : undefined,
-      }));
+      // Process stores with geocoding fallback
+      const stores = await Promise.all(
+        (storesData.data || []).map(async (store: any) => {
+          let lat = store.latitude ? parseFloat(store.latitude) : undefined;
+          let lon = store.longitude ? parseFloat(store.longitude) : undefined;
+          
+          if ((lat === undefined || lon === undefined) && store.location_name) {
+            const geocoded = await geocodeLocation(store.location_name);
+            if (geocoded) {
+              lat = geocoded.lat;
+              lon = geocoded.lon;
+            }
+          }
+          
+          return {
+            id: store.id,
+            name: store.name,
+            type: 'store' as const,
+            address: store.address || store.location_name,
+            featured_image: store.banner_image,
+            latitude: lat,
+            longitude: lon,
+            locationName: store.location_name,
+          };
+        })
+      );
 
-      const products: SearchResult[] = (productsData.data || []).map((product: any) => {
-        const discount = product.discounts?.[0];
-        return {
-          id: product.id,
-          name: product.name,
-          type: 'product' as const,
-          price: product.price,
-          discounted_price: discount ? product.price - (product.price * (discount.discount_percentage / 100)) : product.price,
-          featured_image: product.featured_image,
-          store: product.store,
-          latitude: product.store?.latitude ? parseFloat(product.store.latitude) : undefined,
-          longitude: product.store?.longitude ? parseFloat(product.store.longitude) : undefined,
-        };
-      });
+      // Process products with geocoding fallback
+      const products = await Promise.all(
+        (productsData.data || []).map(async (product: any) => {
+          const discount = product.discounts?.[0];
+          let lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
+          let lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
+          
+          if ((lat === undefined || lon === undefined) && product.store?.location_name) {
+            const geocoded = await geocodeLocation(product.store.location_name);
+            if (geocoded) {
+              lat = geocoded.lat;
+              lon = geocoded.lon;
+            }
+          }
+          
+          return {
+            id: product.id,
+            name: product.name,
+            type: 'product' as const,
+            price: product.price,
+            discounted_price: discount ? product.price - (product.price * (discount.discount_percentage / 100)) : product.price,
+            featured_image: product.featured_image,
+            store: product.store,
+            address: product.store?.address || product.store?.location_name,
+            latitude: lat,
+            longitude: lon,
+            locationName: product.store?.location_name,
+          };
+        })
+      );
 
       setResults([...stores, ...products]);
     } catch (error) {
@@ -183,28 +249,63 @@ const Discover = () => {
       const storesData = await storesRes.json();
       const productsData = await productsRes.json();
 
-      // Use real coordinates from API if available, otherwise undefined
-      const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
-        id: store.id,
-        name: store.name,
-        type: 'store' as const,
-        address: store.address,
-        featured_image: store.banner_image,
-        latitude: store.latitude ? parseFloat(store.latitude) : undefined,
-        longitude: store.longitude ? parseFloat(store.longitude) : undefined,
-      }));
+      // Process stores with geocoding fallback
+      const storesWithCoords = await Promise.all(
+        (storesData.data || []).map(async (store: any) => {
+          let lat = store.latitude ? parseFloat(store.latitude) : undefined;
+          let lon = store.longitude ? parseFloat(store.longitude) : undefined;
+          
+          // If no coordinates but has location_name, geocode it
+          if ((lat === undefined || lon === undefined) && store.location_name) {
+            const geocoded = await geocodeLocation(store.location_name);
+            if (geocoded) {
+              lat = geocoded.lat;
+              lon = geocoded.lon;
+            }
+          }
+          
+          return {
+            id: store.id,
+            name: store.name,
+            type: 'store' as const,
+            address: store.address || store.location_name,
+            featured_image: store.banner_image,
+            latitude: lat,
+            longitude: lon,
+            locationName: store.location_name,
+          };
+        })
+      );
 
-      const products: SearchResult[] = (productsData.data || []).map((product: any) => ({
-        id: product.id,
-        name: product.name,
-        type: 'product' as const,
-        address: product.store?.address,
-        featured_image: product.featured_image,
-        latitude: product.store?.latitude ? parseFloat(product.store.latitude) : undefined,
-        longitude: product.store?.longitude ? parseFloat(product.store.longitude) : undefined,
-      }));
+      // Process products with geocoding fallback
+      const productsWithCoords = await Promise.all(
+        (productsData.data || []).map(async (product: any) => {
+          let lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
+          let lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
+          
+          // If no coordinates but store has location_name, geocode it
+          if ((lat === undefined || lon === undefined) && product.store?.location_name) {
+            const geocoded = await geocodeLocation(product.store.location_name);
+            if (geocoded) {
+              lat = geocoded.lat;
+              lon = geocoded.lon;
+            }
+          }
+          
+          return {
+            id: product.id,
+            name: product.name,
+            type: 'product' as const,
+            address: product.store?.address || product.store?.location_name,
+            featured_image: product.featured_image,
+            latitude: lat,
+            longitude: lon,
+            locationName: product.store?.location_name,
+          };
+        })
+      );
 
-      setSuggestions([...stores, ...products].slice(0, 8));
+      setSuggestions([...storesWithCoords, ...productsWithCoords].slice(0, 8));
     } catch (error) {
       console.error("Error fetching suggestions:", error);
     } finally {
@@ -279,31 +380,63 @@ const Discover = () => {
         const storesData = await storesRes.json();
         const productsData = await productsRes.json();
 
-        // Use real coordinates from API if available
-        const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
-          id: store.id,
-          name: store.name,
-          type: 'store' as const,
-          address: store.address,
-          featured_image: store.banner_image,
-          latitude: store.latitude ? parseFloat(store.latitude) : undefined,
-          longitude: store.longitude ? parseFloat(store.longitude) : undefined,
-        }));
+        // Process stores with geocoding fallback
+        const stores = await Promise.all(
+          (storesData.data || []).map(async (store: any) => {
+            let lat = store.latitude ? parseFloat(store.latitude) : undefined;
+            let lon = store.longitude ? parseFloat(store.longitude) : undefined;
+            
+            if ((lat === undefined || lon === undefined) && store.location_name) {
+              const geocoded = await geocodeLocation(store.location_name);
+              if (geocoded) {
+                lat = geocoded.lat;
+                lon = geocoded.lon;
+              }
+            }
+            
+            return {
+              id: store.id,
+              name: store.name,
+              type: 'store' as const,
+              address: store.address || store.location_name,
+              featured_image: store.banner_image,
+              latitude: lat,
+              longitude: lon,
+              locationName: store.location_name,
+            };
+          })
+        );
 
-        const products: SearchResult[] = (productsData.data || []).map((product: any) => {
-          const discount = product.discounts?.[0];
-          return {
-            id: product.id,
-            name: product.name,
-            type: 'product' as const,
-            price: product.price,
-            discounted_price: discount ? product.price - (product.price * (discount.discount_percentage / 100)) : product.price,
-            featured_image: product.featured_image,
-            store: product.store,
-            latitude: product.store?.latitude ? parseFloat(product.store.latitude) : undefined,
-            longitude: product.store?.longitude ? parseFloat(product.store.longitude) : undefined,
-          };
-        });
+        // Process products with geocoding fallback
+        const products = await Promise.all(
+          (productsData.data || []).map(async (product: any) => {
+            const discount = product.discounts?.[0];
+            let lat = product.store?.latitude ? parseFloat(product.store.latitude) : undefined;
+            let lon = product.store?.longitude ? parseFloat(product.store.longitude) : undefined;
+            
+            if ((lat === undefined || lon === undefined) && product.store?.location_name) {
+              const geocoded = await geocodeLocation(product.store.location_name);
+              if (geocoded) {
+                lat = geocoded.lat;
+                lon = geocoded.lon;
+              }
+            }
+            
+            return {
+              id: product.id,
+              name: product.name,
+              type: 'product' as const,
+              price: product.price,
+              discounted_price: discount ? product.price - (product.price * (discount.discount_percentage / 100)) : product.price,
+              featured_image: product.featured_image,
+              store: product.store,
+              address: product.store?.address || product.store?.location_name,
+              latitude: lat,
+              longitude: lon,
+              locationName: product.store?.location_name,
+            };
+          })
+        );
 
         setResults([...stores, ...products]);
       } catch (error) {
