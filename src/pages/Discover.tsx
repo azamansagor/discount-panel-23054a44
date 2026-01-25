@@ -361,9 +361,9 @@ const Discover = () => {
         </button>
 
         {/* Bottom Results Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 z-[999] bg-background rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
+        <div className="absolute bottom-14 left-0 right-0 z-[999] bg-background rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
           <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mt-3 mb-2" />
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-3">
             <h2 className="text-lg font-bold text-foreground mb-3">
               {searchQuery ? 'Search Results' : 'Nearby'}
             </h2>
