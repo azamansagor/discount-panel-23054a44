@@ -7,6 +7,7 @@ import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useDebounce } from "@/hooks/useDebounce";
 import SearchSuggestions from "@/components/search/SearchSuggestions";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -51,6 +52,8 @@ const CategoryResults = () => {
   const [suggestions, setSuggestions] = useState<{ id: number; name: string; type: "store" | "product" }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [removeDrawerOpen, setRemoveDrawerOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<ResultItem | null>(null);
   
   const debouncedSearchQuery = useDebounce(searchQuery, 400);
   
@@ -240,14 +243,39 @@ const CategoryResults = () => {
 
   const handleWishlistToggle = (item: ResultItem) => {
     const type = item.type as 'product' | 'store';
-    toggleWishlist(type, item.id, {
-      id: item.id,
-      name: item.name,
-      price: item.price ? String(item.price) : undefined,
-      featured_image: item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : undefined,
-      banner_image: item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : undefined,
-      discounts: item.discount ? [{ id: 0, discount_type: 'percentage', amount: String(item.discount) }] : undefined,
-    });
+    const inWishlist = isInWishlist(type, item.id);
+    
+    if (inWishlist) {
+      // Show confirmation drawer for removal
+      setItemToRemove(item);
+      setRemoveDrawerOpen(true);
+    } else {
+      // Add directly without confirmation
+      toggleWishlist(type, item.id, {
+        id: item.id,
+        name: item.name,
+        price: item.price ? String(item.price) : undefined,
+        featured_image: item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : undefined,
+        banner_image: item.images[0] ? `${STORAGE_URL}/${item.images[0]}` : undefined,
+        discounts: item.discount ? [{ id: 0, discount_type: 'percentage', amount: String(item.discount) }] : undefined,
+      });
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      const type = itemToRemove.type as 'product' | 'store';
+      toggleWishlist(type, itemToRemove.id, {
+        id: itemToRemove.id,
+        name: itemToRemove.name,
+        price: itemToRemove.price ? String(itemToRemove.price) : undefined,
+        featured_image: itemToRemove.images[0] ? `${STORAGE_URL}/${itemToRemove.images[0]}` : undefined,
+        banner_image: itemToRemove.images[0] ? `${STORAGE_URL}/${itemToRemove.images[0]}` : undefined,
+        discounts: itemToRemove.discount ? [{ id: 0, discount_type: 'percentage', amount: String(itemToRemove.discount) }] : undefined,
+      });
+    }
+    setRemoveDrawerOpen(false);
+    setItemToRemove(null);
   };
 
   const handleImageDot = (itemKey: string, index: number) => {
@@ -489,6 +517,25 @@ const CategoryResults = () => {
       </div>
 
       <TabBar />
+
+      {/* Remove Wishlist Confirmation Drawer */}
+      <RemoveWishlistDrawer
+        isOpen={removeDrawerOpen}
+        onClose={() => {
+          setRemoveDrawerOpen(false);
+          setItemToRemove(null);
+        }}
+        onConfirm={handleConfirmRemove}
+        item={itemToRemove ? {
+          id: itemToRemove.id,
+          name: itemToRemove.name,
+          price: itemToRemove.price ? String(itemToRemove.price) : undefined,
+          featured_image: itemToRemove.images[0] ? `${STORAGE_URL}/${itemToRemove.images[0]}` : undefined,
+          banner_image: itemToRemove.images[0] ? `${STORAGE_URL}/${itemToRemove.images[0]}` : undefined,
+          address: itemToRemove.location,
+        } : null}
+        type={itemToRemove?.type || 'product'}
+      />
     </div>
   );
 };
