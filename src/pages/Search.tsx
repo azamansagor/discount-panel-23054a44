@@ -132,12 +132,15 @@ const Search = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchResults = useCallback(async (pageNum: number, reset = false) => {
+  const fetchResults = useCallback(async (pageNum: number, reset = false, overrideFilters?: SearchFiltersState) => {
     if (reset) {
       setLoading(true);
     } else {
       setLoadingMore(true);
     }
+
+    // Use override filters if provided, otherwise use current state
+    const activeFilters = overrideFilters || filters;
 
     try {
       const response = await fetch(`${API_ROOT}/search`, {
@@ -145,9 +148,9 @@ const Search = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: searchQuery,
-          type: filters.type,
-          price_range: filters.priceRange,
-          rating: filters.rating,
+          type: activeFilters.type,
+          price_range: activeFilters.priceRange,
+          rating: activeFilters.rating,
           per_page: 10,
           page: pageNum,
         }),
@@ -551,8 +554,8 @@ const Search = () => {
           if (searchQuery.length > 0) {
             setPage(1);
             setHasMore(true);
-            // Trigger search with new filters
-            setTimeout(() => fetchResults(1, true), 0);
+            // Pass new filters directly to avoid stale state
+            fetchResults(1, true, newFilters);
           }
         }}
       />
