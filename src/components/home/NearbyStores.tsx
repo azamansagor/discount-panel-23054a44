@@ -133,6 +133,9 @@ export const NearbyStores = () => {
                   }}
                 />
                 
+                {/* Curved bottom overlay */}
+                <div className="absolute bottom-0 left-0 right-0 h-5 bg-card" style={{ borderRadius: '20px 20px 0 0' }} />
+                
                 {/* Category Badge */}
                 <div className="absolute top-3 left-3 bg-primary text-primary-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
                   {store.category}
@@ -154,7 +157,7 @@ export const NearbyStores = () => {
                 </button>
 
                 {/* Time & Distance */}
-                <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                <div className="absolute bottom-7 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                   <Clock className="h-3 w-3" />
                   <span>{store.deliveryTime}</span>
                   <span>·</span>

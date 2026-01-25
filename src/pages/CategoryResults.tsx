@@ -402,6 +402,9 @@ const CategoryResults = () => {
                       }}
                     />
 
+                    {/* Curved bottom overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 h-6 bg-card" style={{ borderRadius: '24px 24px 0 0' }} />
+
                     {/* Discount Badge */}
                     {item.discount && item.discount > 0 && (
                       <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
@@ -427,7 +430,7 @@ const CategoryResults = () => {
                     </button>
 
                     {/* Time & Distance Info */}
-                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                    <div className="absolute bottom-8 left-3 flex items-center gap-1.5 text-white text-sm font-medium bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
                       <Clock className="h-4 w-4" />
                       <span>{item.deliveryTime}</span>
                       <span>·</span>

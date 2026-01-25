@@ -168,6 +168,9 @@ export const FeaturedProducts = () => {
                     }}
                   />
                   
+                  {/* Curved bottom overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 h-4 bg-card" style={{ borderRadius: '16px 16px 0 0' }} />
+                  
                   {/* Discount Badge */}
                   {product.discount > 0 && (
                     <div className="absolute top-3 left-3 bg-accent text-accent-foreground px-2.5 py-1 rounded-lg text-xs font-bold shadow-md">
@@ -193,7 +196,7 @@ export const FeaturedProducts = () => {
                   </button>
 
                   {/* Time & Distance */}
-                  <div className="absolute bottom-2 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <div className="absolute bottom-6 left-2 flex items-center gap-1 text-white text-xs font-medium bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                     <Clock className="h-3 w-3" />
                     <span>25-30 mins</span>
                     <span>·</span>
