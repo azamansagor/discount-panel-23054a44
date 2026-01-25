@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { MapPin, Search, Navigation, Store, Package, Heart } from "lucide-react";
+import { MapPin, Search, Navigation, Store, Package, Heart, Home } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { useNavigate } from "react-router-dom";
@@ -240,6 +240,12 @@ const Discover = () => {
         className="z-[1000] bg-background/95 backdrop-blur-md border-b border-border/50 safe-area-inset-top flex-shrink-0"
       >
         <div className="flex items-center gap-3 px-4 py-3">
+          <button 
+            onClick={() => navigate('/home')}
+            className="p-2 bg-secondary rounded-xl"
+          >
+            <Home className="w-5 h-5 text-foreground" />
+          </button>
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
