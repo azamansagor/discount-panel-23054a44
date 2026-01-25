@@ -46,6 +46,7 @@ const Search = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<SearchFiltersState>({
     type: "all",
@@ -63,6 +64,8 @@ const Search = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const isFetchingRef = useRef(false);
+  const lastRequestedPageRef = useRef<number | null>(null);
 
   // Auto-focus search input or open filters on mount based on query params
   useEffect(() => {
@@ -141,8 +144,16 @@ const Search = () => {
       return;
     }
 
+    // Prevent accidental duplicate requests (IntersectionObserver can fire multiple times)
+    if (isFetchingRef.current && lastRequestedPageRef.current === pageNum) {
+      return;
+    }
+    isFetchingRef.current = true;
+    lastRequestedPageRef.current = pageNum;
+
     if (reset) {
       setLoading(true);
+      setLoadMoreFailed(false);
     } else {
       setLoadingMore(true);
     }
@@ -183,9 +194,16 @@ const Search = () => {
       setPage(pageNum);
     } catch (error) {
       console.error("Search error:", error);
+
+      // If loading more fails, stop auto-retrying (prevents infinite loader loop)
+      if (pageNum > 1) {
+        setLoadMoreFailed(true);
+        setHasMore(false);
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
+      isFetchingRef.current = false;
     }
   }, [searchQuery, filters]);
 
@@ -196,6 +214,8 @@ const Search = () => {
     if (searchQuery.length > 0) {
       setPage(1);
       setHasMore(true);
+      setLoadMoreFailed(false);
+      lastRequestedPageRef.current = null;
       fetchResults(1, true);
       setShowSuggestions(false);
     }
@@ -207,7 +227,14 @@ const Search = () => {
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore && !loading && results.length > 0) {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !loadMoreFailed &&
+          !loadingMore &&
+          !loading &&
+          results.length > 0
+        ) {
           fetchResults(page + 1);
         }
       },
@@ -221,7 +248,7 @@ const Search = () => {
     return () => {
       if (observerRef.current) observerRef.current.disconnect();
     };
-  }, [hasMore, loadingMore, loading, page, fetchResults, results.length]);
+  }, [hasMore, loadMoreFailed, loadingMore, loading, page, fetchResults, results.length]);
 
   const handleWishlistToggle = (item: SearchResult) => {
     const type = item.type;
@@ -569,6 +596,8 @@ const Search = () => {
           if (filtersChanged && searchQuery.length > 0) {
             setPage(1);
             setHasMore(true);
+            setLoadMoreFailed(false);
+            lastRequestedPageRef.current = null;
             fetchResults(1, true, newFilters);
           }
         }}
