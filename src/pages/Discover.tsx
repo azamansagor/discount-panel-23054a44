@@ -65,6 +65,7 @@ const Discover = () => {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number]>([23.8103, 90.4125]); // Default: Dhaka
+  const [mapCenter, setMapCenter] = useState<[number, number]>([23.8103, 90.4125]); // Separate map center
   const [locationName, setLocationName] = useState("Getting location...");
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -81,6 +82,7 @@ const Discover = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           setUserLocation([latitude, longitude]);
+          setMapCenter([latitude, longitude]); // Also update map center
           // Reverse geocode to get location name
           fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
             .then(res => res.json())
@@ -182,14 +184,15 @@ const Discover = () => {
       const storesData = await storesRes.json();
       const productsData = await productsRes.json();
 
+      // Use real coordinates from API if available, otherwise undefined
       const stores: SearchResult[] = (storesData.data || []).map((store: any) => ({
         id: store.id,
         name: store.name,
         type: 'store' as const,
         address: store.address,
         featured_image: store.banner_image,
-        latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
-        longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+        latitude: store.latitude ? parseFloat(store.latitude) : undefined,
+        longitude: store.longitude ? parseFloat(store.longitude) : undefined,
       }));
 
       const products: SearchResult[] = (productsData.data || []).map((product: any) => ({
@@ -198,8 +201,8 @@ const Discover = () => {
         type: 'product' as const,
         address: product.store?.address,
         featured_image: product.featured_image,
-        latitude: userLocation[0] + (Math.random() - 0.5) * 0.02,
-        longitude: userLocation[1] + (Math.random() - 0.5) * 0.02,
+        latitude: product.store?.latitude ? parseFloat(product.store.latitude) : undefined,
+        longitude: product.store?.longitude ? parseFloat(product.store.longitude) : undefined,
       }));
 
       setSuggestions([...stores, ...products].slice(0, 8));
@@ -210,13 +213,22 @@ const Discover = () => {
     }
   };
 
+  // Check if item has valid coordinates
+  const hasValidCoordinates = (item: SearchResult) => {
+    return item.latitude !== undefined && 
+           item.longitude !== undefined && 
+           !isNaN(item.latitude) && 
+           !isNaN(item.longitude);
+  };
+
   // Handle suggestion selection - zoom to location
   const handleSuggestionSelect = (item: SearchResult) => {
     setShowSuggestions(false);
     setSearchQuery(item.name);
     
-    if (item.latitude && item.longitude) {
-      setUserLocation([item.latitude, item.longitude]);
+    // Only zoom if the item has real coordinates
+    if (hasValidCoordinates(item)) {
+      setMapCenter([item.latitude!, item.longitude!]);
       setMapZoom(18); // Zoom to street level
       setTimeout(() => setMapZoom(undefined), 500);
     }
@@ -393,10 +405,12 @@ const Discover = () => {
                             <p className="text-foreground font-medium truncate">{item.name}</p>
                             <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                               <MapPin className="w-3 h-3 flex-shrink-0" />
-                              {item.address || 'Location available'}
+                              {item.address || 'No address'}
                             </p>
                           </div>
-                          <Navigation className="w-4 h-4 text-primary shrink-0" />
+                          {hasValidCoordinates(item) && (
+                            <Navigation className="w-4 h-4 text-primary shrink-0" />
+                          )}
                         </button>
                       </li>
                     ))}
@@ -449,7 +463,7 @@ const Discover = () => {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <MapCenterUpdater center={userLocation} zoom={mapZoom} />
+          <MapCenterUpdater center={mapCenter} zoom={mapZoom} />
           
           {/* User location marker */}
           <Marker 
@@ -495,7 +509,9 @@ const Discover = () => {
           onClick={() => {
             if (navigator.geolocation) {
               navigator.geolocation.getCurrentPosition((pos) => {
-                setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+                const newLocation: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+                setUserLocation(newLocation);
+                setMapCenter(newLocation); // Update map center separately
                 setMapZoom(18); // Zoom to street level (closest view)
                 // Reset zoom state after a short delay so future center updates don't force zoom
                 setTimeout(() => setMapZoom(undefined), 500);
