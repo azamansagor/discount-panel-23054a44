@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Key } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,17 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-cyan-50 to-background flex flex-col">
+      {/* Back Button */}
+      <div className="p-4">
+        <button
+          onClick={() => navigate('/home')}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="text-sm font-medium">Back to App</span>
+        </button>
+      </div>
+
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center p-4">
         <motion.div
