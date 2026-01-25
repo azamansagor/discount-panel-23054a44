@@ -155,7 +155,7 @@ const Login = () => {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
 
-            {/* Google Sign In */}
+            {/* Google Sign In - Temporarily commented out
             <Button
               type="button"
               variant="outline"
@@ -172,6 +172,7 @@ const Login = () => {
               </svg>
               Sign in with Google
             </Button>
+            */}
           </form>
 
           {/* Sign Up Link */}
