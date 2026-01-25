@@ -431,13 +431,6 @@ const Explore = () => {
                       />
                     </button>
 
-                    {/* Time & Distance Info */}
-                    <div className="absolute bottom-4 left-4 flex items-center gap-1 text-white text-sm font-medium">
-                      <Clock className="h-4 w-4" />
-                      <span>{item.deliveryTime}</span>
-                      <span className="mx-1">.</span>
-                      <span>{item.distance}</span>
-                    </div>
 
                     {/* Image Dots */}
                     {item.images.length > 1 && (
