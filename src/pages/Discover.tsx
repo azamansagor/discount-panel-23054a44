@@ -232,12 +232,12 @@ const Discover = () => {
   };
 
   return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-background flex flex-col">
       {/* Header with Search */}
       <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="sticky top-0 z-[1000] bg-background/95 backdrop-blur-md border-b border-border/50 safe-area-inset-top flex-shrink-0"
+        className="z-[1000] bg-background/95 backdrop-blur-md border-b border-border/50 safe-area-inset-top flex-shrink-0"
       >
         <div className="flex items-center gap-3 px-4 py-3">
           <button 
@@ -355,7 +355,7 @@ const Discover = () => {
         </button>
 
         {/* Bottom Results Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 z-[999] bg-background rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] pb-20">
+        <div className="absolute bottom-0 left-0 right-0 z-[999] bg-background rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
           <div className="w-12 h-1.5 bg-muted rounded-full mx-auto mt-3 mb-2" />
           <div className="px-4 pb-4">
             <h2 className="text-lg font-bold text-foreground mb-3">
@@ -441,7 +441,10 @@ const Discover = () => {
         </div>
       </div>
 
-      <TabBar />
+      {/* Bottom Navigation */}
+      <div className="flex-shrink-0">
+        <TabBar />
+      </div>
     </div>
   );
 };
