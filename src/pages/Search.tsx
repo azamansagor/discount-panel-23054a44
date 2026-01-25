@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Heart, Search as SearchIcon, MapPin, SlidersHorizontal, X, Store, Package } from "lucide-react";
+import { ArrowLeft, Heart, Search as SearchIcon, MapPin, SlidersHorizontal, X, Store, Package, Navigation } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import SearchFilters from "@/components/search/SearchFilters";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
@@ -31,12 +32,15 @@ interface SearchFiltersState {
   type: "all" | "stores" | "products";
   priceRange: "all" | "0-50" | "50-100" | "100+";
   rating: "all" | "3" | "4" | "5";
+  useLocation: boolean;
+  radius: number;
 }
 
 const Search = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const geolocation = useGeolocation();
   
   const initialQuery = searchParams.get("q") || "";
   
@@ -52,6 +56,8 @@ const Search = () => {
     type: "all",
     priceRange: "all",
     rating: "all",
+    useLocation: false,
+    radius: 10,
   });
   const [removeDrawerOpen, setRemoveDrawerOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<SearchResult | null>(null);
@@ -161,18 +167,28 @@ const Search = () => {
     // Use override filters if provided, otherwise use current state
     const activeFilters = overrideFilters || filters;
 
+    // Build request body with optional location
+    const requestBody: Record<string, any> = {
+      query: searchQuery.trim(),
+      type: activeFilters.type,
+      price_range: activeFilters.priceRange,
+      rating: activeFilters.rating,
+      per_page: 10,
+      page: pageNum,
+    };
+
+    // Add location params if enabled and available
+    if (activeFilters.useLocation && geolocation.hasLocation) {
+      requestBody.latitude = geolocation.latitude;
+      requestBody.longitude = geolocation.longitude;
+      requestBody.radius = activeFilters.radius;
+    }
+
     try {
       const response = await fetch(`${API_ROOT}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: searchQuery.trim(),
-          type: activeFilters.type,
-          price_range: activeFilters.priceRange,
-          rating: activeFilters.rating,
-          per_page: 10,
-          page: pageNum,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) throw new Error("Search failed");
@@ -307,6 +323,7 @@ const Search = () => {
     filters.type !== "all",
     filters.priceRange !== "all",
     filters.rating !== "all",
+    filters.useLocation,
   ].filter(Boolean).length;
 
   return (
@@ -437,6 +454,15 @@ const Search = () => {
               <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
                 {filters.rating}+ Stars
                 <button onClick={() => setFilters(f => ({ ...f, rating: "all" }))}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            )}
+            {filters.useLocation && (
+              <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
+                <Navigation className="w-3 h-3" />
+                Within {filters.radius} km
+                <button onClick={() => setFilters(f => ({ ...f, useLocation: false }))}>
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -584,12 +610,18 @@ const Search = () => {
         isOpen={showFilters}
         onClose={() => setShowFilters(false)}
         filters={filters}
+        locationLoading={geolocation.loading}
+        hasLocation={geolocation.hasLocation}
+        onRequestLocation={geolocation.requestLocation}
+        locationError={geolocation.error}
         onApply={(newFilters) => {
-          // Only fetch if filters actually changed
+          // Check if filters actually changed
           const filtersChanged = 
             newFilters.type !== filters.type ||
             newFilters.priceRange !== filters.priceRange ||
-            newFilters.rating !== filters.rating;
+            newFilters.rating !== filters.rating ||
+            newFilters.useLocation !== filters.useLocation ||
+            newFilters.radius !== filters.radius;
           
           setFilters(newFilters);
           
