@@ -1,16 +1,16 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import {
-  User,
-  Settings,
-  Heart,
-  ShoppingBag,
-  Bell,
-  HelpCircle,
+import { 
+  User, 
+  Settings, 
+  Heart, 
+  ShoppingBag, 
+  Bell, 
+  HelpCircle, 
   LogOut,
   LogIn,
   ChevronRight,
-  Ticket,
+  Ticket
 } from "lucide-react";
 import TabBar from "@/components/layout/TabBar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -80,11 +80,36 @@ const Profile = () => {
           {isAuthenticated ? (
             <button className="text-primary font-medium text-sm">Edit</button>
           ) : (
-            <button onClick={() => navigate("/login")} className="text-primary font-medium text-sm">
+            <button 
+              onClick={() => navigate("/login")}
+              className="text-primary font-medium text-sm"
+            >
               Login
             </button>
           )}
         </motion.div>
+      </div>
+
+      {/* Stats */}
+      <div className="px-4 mb-6">
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "Saved", value: isAuthenticated ? "$1,234" : "$0" },
+            { label: "Orders", value: isAuthenticated ? "23" : "0" },
+            { label: "Points", value: isAuthenticated ? "850" : "0" },
+          ].map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.1 }}
+              className="p-4 bg-card rounded-2xl text-center border border-border/50"
+            >
+              <p className="text-xl font-bold text-primary">{stat.value}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </motion.div>
+          ))}
+        </div>
       </div>
 
       {/* Menu Items */}
@@ -104,7 +129,9 @@ const Profile = () => {
                 <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
-                <span className="flex-1 font-medium text-foreground text-left">{item.label}</span>
+                <span className="flex-1 font-medium text-foreground text-left">
+                  {item.label}
+                </span>
                 {item.badge && (
                   <span className="px-2 py-0.5 bg-accent text-accent-foreground text-xs font-bold rounded-full">
                     {item.badge}
