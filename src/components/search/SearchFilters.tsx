@@ -3,11 +3,16 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { MapPin, Loader2 } from "lucide-react";
 
 interface SearchFiltersState {
   type: "all" | "stores" | "products";
   priceRange: "all" | "0-50" | "50-100" | "100+";
   rating: "all" | "3" | "4" | "5";
+  useLocation: boolean;
+  radius: number;
 }
 
 interface SearchFiltersProps {
@@ -15,9 +20,22 @@ interface SearchFiltersProps {
   onClose: () => void;
   filters: SearchFiltersState;
   onApply: (filters: SearchFiltersState) => void;
+  locationLoading?: boolean;
+  hasLocation?: boolean;
+  onRequestLocation?: () => void;
+  locationError?: string | null;
 }
 
-const SearchFilters = ({ isOpen, onClose, filters, onApply }: SearchFiltersProps) => {
+const SearchFilters = ({ 
+  isOpen, 
+  onClose, 
+  filters, 
+  onApply,
+  locationLoading = false,
+  hasLocation = false,
+  onRequestLocation,
+  locationError,
+}: SearchFiltersProps) => {
   // Local state for pending changes
   const [localFilters, setLocalFilters] = useState<SearchFiltersState>(filters);
 
@@ -33,6 +51,8 @@ const SearchFilters = ({ isOpen, onClose, filters, onApply }: SearchFiltersProps
       type: "all",
       priceRange: "all",
       rating: "all",
+      useLocation: false,
+      radius: 10,
     };
     setLocalFilters(defaultFilters);
     onApply(defaultFilters);
@@ -50,15 +70,73 @@ const SearchFilters = ({ isOpen, onClose, filters, onApply }: SearchFiltersProps
     onClose();
   };
 
+  const handleLocationToggle = (checked: boolean) => {
+    if (checked && !hasLocation && onRequestLocation) {
+      onRequestLocation();
+    }
+    setLocalFilters({ ...localFilters, useLocation: checked });
+  };
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <SheetContent side="bottom" className="h-auto max-h-[80vh] rounded-t-3xl">
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="pb-4">
           <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-2" />
           <SheetTitle className="text-xl font-bold">Filters</SheetTitle>
         </SheetHeader>
 
         <div className="space-y-6 pb-6">
+          {/* Location Filter */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                <Label className="text-base font-semibold">Near Me</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                {locationLoading && (
+                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                )}
+                <Switch
+                  checked={localFilters.useLocation}
+                  onCheckedChange={handleLocationToggle}
+                  disabled={locationLoading}
+                />
+              </div>
+            </div>
+            
+            {localFilters.useLocation && (
+              <div className="space-y-3 pl-7">
+                {locationError ? (
+                  <p className="text-sm text-destructive">{locationError}</p>
+                ) : hasLocation ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Search radius</span>
+                      <span className="font-medium">{localFilters.radius} km</span>
+                    </div>
+                    <Slider
+                      value={[localFilters.radius]}
+                      onValueChange={([value]) => setLocalFilters({ ...localFilters, radius: value })}
+                      min={1}
+                      max={50}
+                      step={1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>1 km</span>
+                      <span>50 km</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Enable location access to search nearby
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Type Filter */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Type</Label>
