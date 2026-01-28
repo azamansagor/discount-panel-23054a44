@@ -13,9 +13,10 @@ import {
   Store,
   Tag,
   ExternalLink,
+  Play,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import TabBar from "@/components/layout/TabBar";
@@ -98,9 +99,9 @@ export default function ProductDetail() {
   const reviewsFetchedRef = useRef(false);
   const reviewsLoadingRef = useRef(false);
 
-  const [activeTab, setActiveTab] = useState("details");
-
-  // Pull to refresh state
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const touchStartRef = useRef(0);
@@ -174,12 +175,12 @@ export default function ProductDetail() {
     }
   }, [productId, hasMoreReviews]);
 
-  // Load reviews when tab changes
+  // Load reviews on mount
   useEffect(() => {
-    if (activeTab === "reviews" && !reviewsFetchedRef.current) {
+    if (product && !reviewsFetchedRef.current) {
       fetchReviews(1, true);
     }
-  }, [activeTab]);
+  }, [product]);
 
   // Infinite scroll for reviews - use refs to avoid stale closures
   const reviewsPageRef = useRef(reviewsPage);
@@ -194,8 +195,6 @@ export default function ProductDetail() {
   }, [hasMoreReviews]);
 
   useEffect(() => {
-    if (activeTab !== "reviews") return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (
@@ -215,7 +214,7 @@ export default function ProductDetail() {
     return () => {
       if (target) observer.unobserve(target);
     };
-  }, [activeTab, fetchReviews]);
+  }, [fetchReviews]);
 
   // Pull to refresh handlers
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -246,13 +245,38 @@ export default function ProductDetail() {
       setReviewsPage(1);
       setHasMoreReviews(true);
       await fetchProduct();
-      if (activeTab === "reviews") {
-        await fetchReviews(1, true);
-      }
+      await fetchReviews(1, true);
       setRefreshing(false);
     }
     setPullDistance(0);
     touchStartRef.current = 0;
+  };
+
+  // Lightbox functions
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const navigateLightbox = (direction: "prev" | "next") => {
+    if (direction === "prev") {
+      setLightboxIndex((prev) => (prev > 0 ? prev - 1 : allImages.length - 1));
+    } else {
+      setLightboxIndex((prev) => (prev < allImages.length - 1 ? prev + 1 : 0));
+    }
+  };
+
+  // Format time ago
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffInDays < 1) return "Today";
+    if (diffInDays === 1) return "Yesterday";
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+    if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+    return `${Math.floor(diffInDays / 365)} years ago`;
   };
 
   // Image slider functions
@@ -640,171 +664,255 @@ export default function ProductDetail() {
         )}
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full justify-start rounded-none border-b border-t bg-background px-4 h-12">
-          <TabsTrigger
-            value="details"
-            className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-          >
-            Details
-          </TabsTrigger>
-          <TabsTrigger
-            value="reviews"
-            className="flex-1 data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none"
-          >
-            Reviews ({product.reviews_count || 0})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Details Tab */}
-        <TabsContent value="details" className="p-4 space-y-6 mt-0">
-          {/* Description */}
-          {product.description && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground text-lg">Description</h3>
-              <div
-                className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: DOMPurify.sanitize(product.description),
-                }}
-              />
-            </div>
-          )}
-
-          {/* Active Offers */}
-          {product.discounts?.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground text-lg">Active Offers</h3>
-              <div className="space-y-2">
-                {product.discounts.map((disc) => (
-                  <div
-                    key={disc.id}
-                    className="p-4 bg-primary/5 rounded-xl border border-primary/20"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Tag className="h-4 w-4 text-primary" />
-                      <p className="font-semibold text-primary">{disc.title}</p>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {disc.discount_type === "percentage" ? `${disc.amount}% off` : `$${disc.amount} off`}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Affiliate Link */}
-          {product.affiliate_link && (
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => window.open(product.affiliate_link, "_blank")}
-            >
-              <ExternalLink className="h-4 w-4" />
-              View on Retailer Site
-            </Button>
-          )}
-        </TabsContent>
-
-        {/* Reviews Tab */}
-        <TabsContent value="reviews" className="p-4 mt-0">
-          <div className="space-y-4">
-            {/* Rating Summary */}
-            {product.reviews_count > 0 && (
-              <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-xl mb-4">
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-foreground">
-                    {(product.average_rating || 0).toFixed(1)}
-                  </p>
-                  <div className="flex items-center gap-0.5 mt-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-3 w-3 ${
-                          i < Math.round(product.average_rating || 0)
-                            ? "fill-warning text-warning"
-                            : "text-muted-foreground/30"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">
-                    Based on {product.reviews_count} reviews
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {reviews.map((review) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-card rounded-xl shadow-sm border border-border/50"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-foreground">
-                    {review.user_name || "Anonymous"}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-3 w-3 ${
-                          i < review.rating
-                            ? "fill-warning text-warning"
-                            : "text-muted-foreground/30"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {review.comment}
-                </p>
-                {review.created_at && (
-                  <p className="text-xs text-muted-foreground/60 mt-2">
-                    {new Date(review.created_at).toLocaleDateString()}
-                  </p>
-                )}
-              </motion.div>
-            ))}
-
-            {/* Loading indicator */}
-            {loadingReviews && (
-              <div className="space-y-4">
-                {[...Array(2)].map((_, i) => (
-                  <div key={i} className="p-4 bg-card rounded-xl border border-border/50">
-                    <Skeleton className="h-4 w-1/4 mb-2" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4 mt-1" />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Load more trigger */}
-            <div ref={reviewsObserverRef} className="h-4" />
-
-            {reviews.length === 0 && !loadingReviews && (
-              <div className="text-center py-12">
-                <Star className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-                <p className="text-muted-foreground">No reviews yet</p>
-                <p className="text-sm text-muted-foreground/60 mt-1">
-                  Be the first to review this product
-                </p>
-              </div>
-            )}
+      {/* Content Sections */}
+      <div className="px-4 space-y-5">
+        {/* Description Section */}
+        {product.description && (
+          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+            <h2 className="font-bold text-foreground">Description</h2>
+            <div
+              className="text-sm text-muted-foreground leading-relaxed prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(product.description),
+              }}
+            />
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
 
+        {/* Active Offers */}
+        {product.discounts?.length > 0 && (
+          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+            <h2 className="font-bold text-foreground">Active Offers</h2>
+            <div className="space-y-2">
+              {product.discounts.map((disc) => (
+                <div
+                  key={disc.id}
+                  className="p-4 bg-primary/5 rounded-xl border border-primary/20"
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Tag className="h-4 w-4 text-primary" />
+                    <p className="font-semibold text-primary">{disc.title}</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {disc.discount_type === "percentage" ? `${disc.amount}% off` : `$${disc.amount} off`}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Photo & Videos Section */}
+        {allImages.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-foreground">Photo & Videos</h2>
+              <button className="text-sm text-primary font-medium" onClick={() => openLightbox(0)}>
+                See all
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {allImages.slice(0, 6).map((img, idx) => (
+                <div
+                  key={idx}
+                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
+                  onClick={() => openLightbox(idx)}
+                >
+                  <img
+                    src={getImageUrl(img)}
+                    alt={`Gallery ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.svg";
+                    }}
+                  />
+                  {idx === 2 && allImages.length > 3 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Play className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Reviews Section */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-foreground">Reviews</h2>
+            <span className="text-sm text-muted-foreground">({product.reviews_count || 0})</span>
+          </div>
+
+          {/* Rating Summary */}
+          <div className="bg-card rounded-2xl p-4 shadow-sm">
+            <div className="flex gap-6">
+              <div className="text-center">
+                <p className="text-4xl font-bold text-foreground">
+                  {(product.average_rating || 0).toFixed(1)}
+                </p>
+                <div className="flex justify-center gap-0.5 my-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className={`h-3 w-3 ${
+                        i < Math.round(product.average_rating || 0)
+                          ? "fill-warning text-warning"
+                          : "text-muted-foreground/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">({product.reviews_count || 0} Reviews)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Review Cards */}
+          {loadingReviews && reviews.length === 0 ? (
+            <div className="space-y-3">
+              {[...Array(2)].map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl p-4 shadow-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4 mt-1" />
+                </div>
+              ))}
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="space-y-3">
+              {reviews.map((review) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-card rounded-2xl p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-secondary overflow-hidden flex items-center justify-center bg-primary/10">
+                        <span className="text-primary font-semibold text-sm">
+                          {(review.user_name || "A").charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground text-sm">{review.user_name || "Anonymous"}</p>
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3 w-3 ${
+                                i < review.rating ? "fill-warning text-warning" : "text-muted-foreground/30"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{formatTimeAgo(review.created_at)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">"{review.comment}"</p>
+                </motion.div>
+              ))}
+
+              {/* Load more trigger */}
+              <div ref={reviewsObserverRef} className="h-4">
+                {loadingReviews && (
+                  <div className="flex justify-center py-4">
+                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-card rounded-2xl p-8 shadow-sm text-center">
+              <p className="text-muted-foreground">No reviews yet</p>
+            </div>
+          )}
+        </div>
+
+        {/* Affiliate Link */}
+        {product.affiliate_link && (
+          <Button
+            variant="default"
+            className="w-full gap-2"
+            onClick={() => window.open(product.affiliate_link, "_blank")}
+          >
+            <ExternalLink className="h-4 w-4" />
+            View on Retailer Site
+          </Button>
+        )}
+      </div>
 
       <TabBar />
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
+            onClick={() => setLightboxOpen(false)}
+          >
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <X className="h-6 w-6 text-white" />
+            </button>
+
+            {/* Navigation */}
+            {allImages.length > 1 && (
+              <>
+                <button
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigateLightbox("prev");
+                  }}
+                >
+                  <ChevronLeft className="h-6 w-6 text-white" />
+                </button>
+                <button
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/20 flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigateLightbox("next");
+                  }}
+                >
+                  <ChevronRight className="h-6 w-6 text-white" />
+                </button>
+              </>
+            )}
+
+            {/* Image */}
+            <motion.img
+              key={lightboxIndex}
+              src={getImageUrl(allImages[lightboxIndex])}
+              alt={`Image ${lightboxIndex + 1}`}
+              className="max-w-full max-h-full object-contain"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Counter */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-white/20 text-white text-sm">
+              {lightboxIndex + 1} / {allImages.length}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Remove Wishlist Drawer */}
       <RemoveWishlistDrawer
