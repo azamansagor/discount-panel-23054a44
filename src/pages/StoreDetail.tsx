@@ -236,10 +236,10 @@ export default function StoreDetail() {
   // Check if location is available
   const hasValidLocation = store?.latitude != null && store?.longitude != null;
 
-  // Open map with location
+  // Open map with location (OpenStreetMap)
   const openMapLocation = () => {
     if (hasValidLocation && store) {
-      const url = `https://www.google.com/maps?q=${store.latitude},${store.longitude}`;
+      const url = `https://www.openstreetmap.org/?mlat=${store.latitude}&mlon=${store.longitude}&zoom=17`;
       window.open(url, "_blank");
     }
   };
