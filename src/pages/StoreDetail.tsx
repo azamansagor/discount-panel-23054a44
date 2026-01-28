@@ -65,7 +65,6 @@ interface StoreDetails {
   owner_name?: string;
   owner_title?: string;
   owner_avatar?: string;
-  price_range?: string;
   features?: { label: string; value: string }[];
 }
 
@@ -127,7 +126,6 @@ export default function StoreDetail() {
           owner_name: raw.owner_name ?? "Store Owner",
           owner_title: raw.owner_title ?? "Store Manager",
           owner_avatar: raw.owner_avatar,
-          price_range: raw.price_range ?? "$50",
         });
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -405,12 +403,6 @@ export default function StoreDetail() {
               </Button>
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-border">
-            <p className="text-sm text-muted-foreground">
-              From <span className="text-foreground font-bold text-lg">{store.price_range}</span>
-              <span className="text-muted-foreground">/ Monthly</span>
-            </p>
-          </div>
         </div>
 
         {/* Descriptions Section */}
@@ -673,20 +665,6 @@ export default function StoreDetail() {
             </div>
           );
         })()}
-      </div>
-
-      {/* Bottom Action Bar */}
-      <div className="fixed bottom-16 left-0 right-0 z-40 bg-card border-t border-border p-4 safe-area-inset-bottom">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground line-through">$65.00</p>
-            <p className="text-xl font-bold text-foreground">{store.price_range || "$50.00"}</p>
-          </div>
-          <Button className="rounded-xl px-8 py-6 bg-primary text-primary-foreground font-semibold shadow-lg">
-            Contact Now
-            <ChevronRight className="h-5 w-5 ml-1" />
-          </Button>
-        </div>
       </div>
 
       <TabBar />
