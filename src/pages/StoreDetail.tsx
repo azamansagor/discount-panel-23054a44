@@ -115,6 +115,11 @@ export default function StoreDetail() {
   const reviewsFetchedRef = useRef(false);
   const allReviewsRef = useRef<Review[]>([]);
 
+  // Products state
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const productsFetchedRef = useRef(false);
+
   // Fetch store details
   useEffect(() => {
     const fetchStore = async () => {
@@ -129,7 +134,7 @@ export default function StoreDetail() {
             ? raw.gallery_images.filter(Boolean).map((url: string, idx: number) => ({ id: idx, image: url }))
             : [];
 
-        setStore({
+        const storeData = {
           ...raw,
           images,
           reviews_count: raw.reviews_count ?? raw.review_count ?? 0,
@@ -142,7 +147,15 @@ export default function StoreDetail() {
           owner_avatar: raw.owner_avatar,
           latitude: raw.latitude ?? raw.lat ?? undefined,
           longitude: raw.longitude ?? raw.lng ?? raw.lon ?? undefined,
-        });
+        };
+        
+        setStore(storeData);
+        
+        // If products are included in store data, use them
+        if (raw.products && Array.isArray(raw.products)) {
+          setProducts(raw.products);
+          productsFetchedRef.current = true;
+        }
       } catch (error) {
         console.error("Error fetching store:", error);
       } finally {
@@ -198,6 +211,38 @@ export default function StoreDetail() {
       fetchReviews();
     }
   }, [store, fetchReviews]);
+
+  // Fetch store products
+  const fetchProducts = useCallback(async () => {
+    if (productsFetchedRef.current || loadingProducts) return;
+
+    setLoadingProducts(true);
+    productsFetchedRef.current = true;
+
+    try {
+      const response = await fetch(`${API_ROOT}/stores/${storeId}/products?per_page=20&page=1`);
+      
+      if (!response.ok) {
+        setProducts([]);
+        return;
+      }
+      
+      const data = await response.json();
+      const productsList = data.data || data.items || data.products || [];
+      setProducts(Array.isArray(productsList) ? productsList : []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [storeId, loadingProducts]);
+
+  useEffect(() => {
+    if (store && !productsFetchedRef.current) {
+      fetchProducts();
+    }
+  }, [store, fetchProducts]);
 
   // Image functions
   const allImages = store ? [store.banner_image, ...(store.images?.map((img) => img.image) || [])].filter(Boolean) : [];
@@ -536,6 +581,93 @@ export default function StoreDetail() {
             </div>
           </div>
         )}
+
+        {/* Store Products */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-foreground">Products</h2>
+            {products.length > 4 && (
+              <button className="text-sm text-primary font-medium">See all</button>
+            )}
+          </div>
+
+          {loadingProducts ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-card rounded-2xl overflow-hidden shadow-sm">
+                  <Skeleton className="aspect-square w-full" />
+                  <div className="p-3 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : products.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {products.slice(0, 4).map((product) => {
+                const discountPercent = product.discountPercent || 
+                  (product.discounts?.[0]?.amount ? parseFloat(product.discounts[0].amount) : 0);
+                const originalPrice = parseFloat(product.price);
+                const discountedPrice = discountPercent > 0 
+                  ? originalPrice * (1 - discountPercent / 100) 
+                  : originalPrice;
+
+                return (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-card rounded-2xl overflow-hidden shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/product/${product.id}`)}
+                  >
+                    {/* Product Image */}
+                    <div className="relative aspect-square">
+                      <img
+                        src={getImageUrl(product.featured_image)}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/placeholder.svg";
+                        }}
+                      />
+                      {/* Discount Ribbon */}
+                      {discountPercent > 0 && (
+                        <div className="absolute top-0 left-0 overflow-hidden w-20 h-20">
+                          <div className="absolute top-3 -left-6 w-24 bg-destructive text-destructive-foreground text-xs font-bold py-1 text-center transform -rotate-45">
+                            {Math.round(discountPercent)}% OFF
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="p-3 space-y-1.5">
+                      <h3 className="font-medium text-sm text-foreground line-clamp-2">
+                        {product.name}
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-primary">
+                          ${discountedPrice.toFixed(2)}
+                        </span>
+                        {discountPercent > 0 && (
+                          <span className="text-xs text-muted-foreground line-through">
+                            ${originalPrice.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="bg-card rounded-2xl p-8 shadow-sm text-center">
+              <Tag className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">No products available</p>
+            </div>
+          )}
+        </div>
 
         {/* Location Map */}
         {store.address && (
