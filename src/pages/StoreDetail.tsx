@@ -27,7 +27,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/contexts/AuthContext";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
+import AddReviewForm from "@/components/reviews/AddReviewForm";
 import { toast } from "sonner";
 
 const API_ROOT = "https://discountpanel.shop/api";
@@ -96,6 +98,7 @@ export default function StoreDetail() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist, removeFromWishlist } = useWishlist();
+  const { canAddReview } = useAuth();
 
   const [store, setStore] = useState<StoreDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -737,6 +740,20 @@ export default function StoreDetail() {
             <h2 className="font-bold text-foreground">Review</h2>
             <button className="text-sm text-primary font-medium">See all</button>
           </div>
+
+          {/* Add Review Form - Only for non-admin logged-in users */}
+          {canAddReview && (
+            <AddReviewForm
+              type="store"
+              itemId={store.id}
+              onReviewAdded={() => {
+                reviewsFetchedRef.current = false;
+                allReviewsRef.current = [];
+                setReviews([]);
+                fetchReviews();
+              }}
+            />
+          )}
 
           {/* Rating Breakdown */}
           <div className="bg-card rounded-2xl p-4 shadow-sm">
