@@ -9,6 +9,7 @@ import NearbyStores from "@/components/home/NearbyStores";
 import PromoBanner from "@/components/home/PromoBanner";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
 const API_ROOT = "https://discountpanel.shop/api";
 
@@ -165,6 +166,36 @@ const BestOffers = () => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [products, setProducts] = useState<BestOfferProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removeDrawerOpen, setRemoveDrawerOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<BestOfferProduct | null>(null);
+
+  const handleWishlistClick = (product: BestOfferProduct) => {
+    if (isInWishlist('product', product.id)) {
+      setItemToRemove(product);
+      setRemoveDrawerOpen(true);
+    } else {
+      toggleWishlist("product", product.id, {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        featured_image: product.featured_image,
+        store: product.store ? { id: 0, name: product.store.name } : undefined,
+        discounts: product.discounts?.map((d) => ({
+          id: 0,
+          discount_type: "percentage",
+          amount: d.amount,
+        })),
+      });
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      toggleWishlist('product', itemToRemove.id);
+      setRemoveDrawerOpen(false);
+      setItemToRemove(null);
+    }
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -249,18 +280,7 @@ const BestOffers = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleWishlist("product", product.id, {
-                      id: product.id,
-                      name: product.name,
-                      price: product.price,
-                      featured_image: product.featured_image,
-                      store: product.store ? { id: 0, name: product.store.name } : undefined,
-                      discounts: product.discounts?.map((d) => ({
-                        id: 0,
-                        discount_type: "percentage",
-                        amount: d.amount,
-                      })),
-                    });
+                    handleWishlistClick(product);
                   }}
                   className="absolute top-2 right-2 w-7 h-7 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
                 >
@@ -289,6 +309,23 @@ const BestOffers = () => {
           );
         })}
       </div>
+
+      <RemoveWishlistDrawer
+        isOpen={removeDrawerOpen}
+        onClose={() => {
+          setRemoveDrawerOpen(false);
+          setItemToRemove(null);
+        }}
+        onConfirm={handleConfirmRemove}
+        item={itemToRemove ? {
+          id: itemToRemove.id,
+          name: itemToRemove.name,
+          price: itemToRemove.price,
+          featured_image: itemToRemove.featured_image,
+          store: itemToRemove.store ? { id: 0, name: itemToRemove.store.name } : undefined,
+        } : null}
+        type="product"
+      />
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { Star, Heart, MapPin, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/contexts/WishlistContext";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
 interface Discount {
   id: number;
@@ -93,6 +94,32 @@ export const FeaturedProducts = () => {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [removeDrawerOpen, setRemoveDrawerOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<Product | null>(null);
+
+  const handleWishlistClick = (product: Product) => {
+    const productId = parseInt(product.id);
+    if (isInWishlist('product', productId)) {
+      setItemToRemove(product);
+      setRemoveDrawerOpen(true);
+    } else {
+      toggleWishlist('product', productId, {
+        id: productId,
+        name: product.name,
+        price: String(product.price),
+        featured_image: product.image,
+        store: { id: 0, name: product.storeName },
+      });
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      toggleWishlist('product', parseInt(itemToRemove.id));
+      setRemoveDrawerOpen(false);
+      setItemToRemove(null);
+    }
+  };
 
   useEffect(() => {
     fetchProducts().then((data) => {
@@ -178,13 +205,7 @@ export const FeaturedProducts = () => {
                   className="absolute top-3 right-3 w-8 h-8 bg-card/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggleWishlist('product', parseInt(product.id), {
-                      id: parseInt(product.id),
-                      name: product.name,
-                      price: String(product.price),
-                      featured_image: product.image,
-                      store: { id: 0, name: product.storeName },
-                    });
+                    handleWishlistClick(product);
                   }}
                 >
                   <Heart className={`w-4 h-4 transition-colors ${isInWishlist('product', parseInt(product.id)) ? 'fill-destructive text-destructive' : 'text-muted-foreground'}`} />
@@ -224,6 +245,23 @@ export const FeaturedProducts = () => {
           </motion.div>
         ))}
       </div>
+
+      <RemoveWishlistDrawer
+        isOpen={removeDrawerOpen}
+        onClose={() => {
+          setRemoveDrawerOpen(false);
+          setItemToRemove(null);
+        }}
+        onConfirm={handleConfirmRemove}
+        item={itemToRemove ? {
+          id: parseInt(itemToRemove.id),
+          name: itemToRemove.name,
+          price: String(itemToRemove.price),
+          featured_image: itemToRemove.image,
+          store: { id: 0, name: itemToRemove.storeName },
+        } : null}
+        type="product"
+      />
     </div>
   );
 };
