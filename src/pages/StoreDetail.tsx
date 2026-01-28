@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -246,12 +246,12 @@ export default function StoreDetail() {
   // Open map in OpenStreetMap
   const openMapLocation = () => {
     if (hasValidLocation && store) {
-      const url = `https://www.openstreetmap.org/?mlat=${store.latitude}&mlon=${store.longitude}&zoom=17`;
+      const url = `https://www.openstreetmap.org/search?query=${encodeURIComponent(store.address || store.name)}#map=17/${store.latitude}/${store.longitude}`;
       window.open(url, "_blank");
     }
   };
 
-  // Share functionality
+  // Share functionality - triggers native share on mobile
   const handleShare = async () => {
     const shareData = {
       title: store?.name || "Store",
@@ -260,18 +260,17 @@ export default function StoreDetail() {
     };
 
     try {
-      if (navigator.share) {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
-        toast({
-          title: "Link copied",
-          description: "Store link copied to clipboard",
-        });
+        toast.success("Link copied to clipboard");
       }
-    } catch (error) {
-      // User cancelled or error
-      console.log("Share cancelled or failed");
+    } catch (error: any) {
+      // User cancelled share or error occurred
+      if (error?.name !== "AbortError") {
+        console.log("Share failed:", error);
+      }
     }
   };
 

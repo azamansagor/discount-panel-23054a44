@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 const API_BASE_URL = 'https://discountpanel.shop/api';
 
@@ -221,10 +221,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           const items = Array.isArray(prev) ? prev : [];
           return items.filter(item => !(item.type === type && item.item_id === itemId));
         });
-        toast({
-          title: "Removed from wishlist",
-          description: `${itemName} has been removed from your wishlist`,
-        });
+        toast.success(`${itemName} removed from wishlist`);
       } else {
         // Add optimistically
         const optimisticItem: WishlistItem = {
@@ -235,10 +232,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           created_at: new Date().toISOString(),
         };
         setWishlistItems(prev => [...(Array.isArray(prev) ? prev : []), optimisticItem]);
-        toast({
-          title: "Added to wishlist",
-          description: `${itemName} has been added to your wishlist`,
-        });
+        toast.success(`${itemName} added to wishlist`);
       }
 
       try {
@@ -253,22 +247,14 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         if (!data.success) {
           // Rollback on failure
           setWishlistItems(previousItems);
-          toast({
-            title: "Error",
-            description: "Failed to update wishlist. Please try again.",
-            variant: "destructive",
-          });
+          toast.error("Failed to update wishlist. Please try again.");
         }
         // No refetch needed - optimistic update is in place
       } catch (error) {
         console.error('Failed to toggle wishlist:', error);
         // Rollback on error
         setWishlistItems(previousItems);
-        toast({
-          title: "Error",
-          description: "Failed to update wishlist. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Failed to update wishlist. Please try again.");
       }
     } else {
       // Handle local wishlist for guests
@@ -276,10 +262,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         setLocalWishlistItems(prev => 
           prev.filter(item => !(item.type === type && item.item_id === itemId))
         );
-        toast({
-          title: "Removed from wishlist",
-          description: `${itemName} has been removed from your wishlist`,
-        });
+        toast.success(`${itemName} removed from wishlist`);
       } else {
         const newEntry: LocalWishlistEntry = {
           type,
@@ -288,10 +271,7 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           added_at: new Date().toISOString(),
         };
         setLocalWishlistItems(prev => [...prev, newEntry]);
-        toast({
-          title: "Added to wishlist",
-          description: `${itemName} has been added to your wishlist`,
-        });
+        toast.success(`${itemName} added to wishlist`);
       }
     }
   };
