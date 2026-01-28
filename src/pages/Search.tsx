@@ -333,7 +333,13 @@ const Search = () => {
         <div className="flex items-center gap-3 px-4 py-4">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (window.history.length > 1) {
+                navigate(-1);
+              } else {
+                navigate("/home");
+              }
+            }}
             className="shrink-0 -ml-2 h-10 w-10 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
