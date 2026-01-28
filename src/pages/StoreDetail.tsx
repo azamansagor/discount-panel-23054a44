@@ -14,12 +14,14 @@ import {
   Share2,
   Play,
   ChevronRight,
+  ChevronLeft,
   Facebook,
   Instagram,
   Twitter,
   Globe,
   Users,
   Tag,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -68,6 +70,8 @@ interface StoreDetails {
   owner_avatar?: string;
   price_range?: string;
   features?: { label: string; value: string }[];
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Product {
@@ -96,6 +100,8 @@ export default function StoreDetail() {
   const [store, setStore] = useState<StoreDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -132,6 +138,8 @@ export default function StoreDetail() {
           owner_title: raw.owner_title ?? "Store Manager",
           owner_avatar: raw.owner_avatar,
           price_range: raw.price_range ?? "$50",
+          latitude: raw.latitude ?? raw.lat ?? undefined,
+          longitude: raw.longitude ?? raw.lng ?? raw.lon ?? undefined,
         });
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -223,6 +231,23 @@ export default function StoreDetail() {
     }
     features.push({ label: "STATUS", value: "Open" });
     return features;
+  };
+
+  // Check if location is available
+  const hasValidLocation = store?.latitude != null && store?.longitude != null;
+
+  // Open map with location
+  const openMapLocation = () => {
+    if (hasValidLocation && store) {
+      const url = `https://www.google.com/maps?q=${store.latitude},${store.longitude}`;
+      window.open(url, "_blank");
+    }
+  };
+
+  // Open lightbox
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
   };
 
   // Format time ago
@@ -479,7 +504,17 @@ export default function StoreDetail() {
                 </div>
               </div>
               <div className="absolute bottom-3 right-3">
-                <Button size="icon" className="rounded-full bg-primary text-primary-foreground shadow-lg">
+                <Button 
+                  size="icon" 
+                  className={`rounded-full shadow-lg ${
+                    hasValidLocation 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  }`}
+                  onClick={openMapLocation}
+                  disabled={!hasValidLocation}
+                  title={hasValidLocation ? "Open in Maps" : "Location coordinates not available"}
+                >
                   <MapPin className="h-4 w-4" />
                 </Button>
               </div>
@@ -492,14 +527,19 @@ export default function StoreDetail() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-foreground">Photo & Videos</h2>
-              <button className="text-sm text-primary font-medium">See all</button>
+              <button 
+                className="text-sm text-primary font-medium"
+                onClick={() => openLightbox(0)}
+              >
+                See all
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {allImages.slice(0, 6).map((img, idx) => (
                 <div
                   key={idx}
-                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
-                  onClick={() => setCurrentImageIndex(idx)}
+                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  onClick={() => openLightbox(idx)}
                 >
                   <img
                     src={getImageUrl(img)}
@@ -512,6 +552,11 @@ export default function StoreDetail() {
                   {idx === 2 && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <Play className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                  {idx === 5 && allImages.length > 6 && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">+{allImages.length - 6}</span>
                     </div>
                   )}
                 </div>
@@ -717,6 +762,101 @@ export default function StoreDetail() {
           </Button>
         </div>
       </div>
+
+      {/* Fullscreen Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
+            onClick={() => setLightboxOpen(false)}
+          >
+            {/* Close Button */}
+            <button
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              onClick={() => setLightboxOpen(false)}
+            >
+              <X className="h-6 w-6" />
+            </button>
+
+            {/* Image Counter */}
+            <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm">
+              {lightboxIndex + 1} / {allImages.length}
+            </div>
+
+            {/* Previous Button */}
+            {allImages.length > 1 && (
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
+                }}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+            )}
+
+            {/* Main Image */}
+            <motion.img
+              key={lightboxIndex}
+              src={getImageUrl(allImages[lightboxIndex])}
+              alt={`Gallery ${lightboxIndex + 1}`}
+              className="max-w-full max-h-full object-contain p-4"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              onError={(e) => {
+                e.currentTarget.src = "/placeholder.svg";
+              }}
+            />
+
+            {/* Next Button */}
+            {allImages.length > 1 && (
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setLightboxIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
+                }}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            )}
+
+            {/* Thumbnail Strip */}
+            {allImages.length > 1 && (
+              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto scrollbar-hide">
+                {allImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLightboxIndex(idx);
+                    }}
+                    className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
+                      lightboxIndex === idx ? "border-white scale-110" : "border-transparent opacity-60"
+                    }`}
+                  >
+                    <img
+                      src={getImageUrl(img)}
+                      alt={`Thumb ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <TabBar />
     </div>
