@@ -650,9 +650,7 @@ export default function StoreDetail() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-foreground">Products</h2>
-            {products.length > 6 && (
-              <button className="text-sm text-primary font-medium">See all</button>
-            )}
+            <button className="text-sm text-primary font-medium">See all</button>
           </div>
 
           {loadingProducts ? (
