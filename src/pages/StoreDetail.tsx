@@ -14,14 +14,12 @@ import {
   Share2,
   Play,
   ChevronRight,
-  ChevronLeft,
   Facebook,
   Instagram,
   Twitter,
   Globe,
   Users,
   Tag,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,14 +62,11 @@ interface StoreDetails {
   social_contacts?: SocialContact[];
   website?: string;
   products?: Product[];
-  views_count?: number;
   owner_name?: string;
   owner_title?: string;
   owner_avatar?: string;
   price_range?: string;
   features?: { label: string; value: string }[];
-  latitude?: number;
-  longitude?: number;
 }
 
 interface Product {
@@ -100,8 +95,6 @@ export default function StoreDetail() {
   const [store, setStore] = useState<StoreDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -120,9 +113,7 @@ export default function StoreDetail() {
         const images: StoreImage[] = Array.isArray(raw.images)
           ? raw.images
           : Array.isArray(raw.gallery_images)
-            ? raw.gallery_images
-                .filter(Boolean)
-                .map((url: string, idx: number) => ({ id: idx, image: url }))
+            ? raw.gallery_images.filter(Boolean).map((url: string, idx: number) => ({ id: idx, image: url }))
             : [];
 
         setStore({
@@ -133,13 +124,10 @@ export default function StoreDetail() {
           phone: raw.phone ?? "",
           social_contacts: raw.social_contacts ?? [],
           website: raw.website ?? undefined,
-          views_count: raw.views_count ?? Math.floor(Math.random() * 20000) + 5000,
           owner_name: raw.owner_name ?? "Store Owner",
           owner_title: raw.owner_title ?? "Store Manager",
           owner_avatar: raw.owner_avatar,
           price_range: raw.price_range ?? "$50",
-          latitude: raw.latitude ?? raw.lat ?? undefined,
-          longitude: raw.longitude ?? raw.lng ?? raw.lon ?? undefined,
         });
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -154,7 +142,7 @@ export default function StoreDetail() {
   // Fetch reviews
   const fetchReviews = useCallback(async () => {
     if (reviewsFetchedRef.current || loadingReviews) return;
-    
+
     setLoadingReviews(true);
     reviewsFetchedRef.current = true;
 
@@ -185,12 +173,7 @@ export default function StoreDetail() {
   }, [store, fetchReviews]);
 
   // Image functions
-  const allImages = store
-    ? [
-        store.banner_image,
-        ...(store.images?.map((img) => img.image) || []),
-      ].filter(Boolean)
-    : [];
+  const allImages = store ? [store.banner_image, ...(store.images?.map((img) => img.image) || [])].filter(Boolean) : [];
 
   const getImageUrl = (image: string | null) => {
     if (!image) return "/placeholder.svg";
@@ -218,7 +201,7 @@ export default function StoreDetail() {
   // Get store features from categories
   const getStoreFeatures = () => {
     if (store?.features) return store.features;
-    
+
     const features: { label: string; value: string }[] = [];
     if (store?.categories?.length) {
       features.push({ label: "CATEGORY", value: store.categories[0].name });
@@ -231,23 +214,6 @@ export default function StoreDetail() {
     }
     features.push({ label: "STATUS", value: "Open" });
     return features;
-  };
-
-  // Check if location is available
-  const hasValidLocation = store?.latitude != null && store?.longitude != null;
-
-  // Open map with location (OpenStreetMap)
-  const openMapLocation = () => {
-    if (hasValidLocation && store) {
-      const url = `https://www.openstreetmap.org/?mlat=${store.latitude}&mlon=${store.longitude}&zoom=17`;
-      window.open(url, "_blank");
-    }
-  };
-
-  // Open lightbox
-  const openLightbox = (index: number) => {
-    setLightboxIndex(index);
-    setLightboxOpen(true);
   };
 
   // Format time ago
@@ -307,20 +273,18 @@ export default function StoreDetail() {
             size="icon"
             className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
             onClick={() => {
-              toggleWishlist('store', store.id, {
+              toggleWishlist("store", store.id, {
                 id: store.id,
                 name: store.name,
                 banner_image: store.banner_image,
               });
             }}
           >
-            <Heart className={`h-5 w-5 ${isInWishlist('store', store.id) ? "fill-destructive text-destructive" : ""}`} />
+            <Heart
+              className={`h-5 w-5 ${isInWishlist("store", store.id) ? "fill-destructive text-destructive" : ""}`}
+            />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
-          >
+          <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm rounded-full shadow-md">
             <Share2 className="h-5 w-5" />
           </Button>
         </div>
@@ -353,9 +317,7 @@ export default function StoreDetail() {
               key={idx}
               onClick={() => setCurrentImageIndex(idx)}
               className={`relative w-16 h-16 flex-shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                currentImageIndex === idx
-                  ? "border-primary shadow-lg scale-105"
-                  : "border-background shadow-md"
+                currentImageIndex === idx ? "border-primary shadow-lg scale-105" : "border-background shadow-md"
               }`}
             >
               <img
@@ -373,12 +335,6 @@ export default function StoreDetail() {
 
       {/* Content */}
       <div className="px-4 pt-4 space-y-5">
-        {/* View Count */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Eye className="h-4 w-4" />
-          <span>{store.views_count?.toLocaleString()} people viewed this</span>
-        </div>
-
         {/* Store Name */}
         <h1 className="text-xl font-bold text-foreground">{store.name}</h1>
 
@@ -404,16 +360,12 @@ export default function StoreDetail() {
               <Star
                 key={i}
                 className={`h-4 w-4 ${
-                  i < Math.round(store.average_rating || 0)
-                    ? "fill-warning text-warning"
-                    : "text-muted-foreground/30"
+                  i < Math.round(store.average_rating || 0) ? "fill-warning text-warning" : "text-muted-foreground/30"
                 }`}
               />
             ))}
           </div>
-          <span className="text-sm text-muted-foreground">
-            ({store.reviews_count || 0} reviews)
-          </span>
+          <span className="text-sm text-muted-foreground">({store.reviews_count || 0} reviews)</span>
         </div>
 
         {/* Owner/Agent Card */}
@@ -448,10 +400,7 @@ export default function StoreDetail() {
                   <Phone className="h-4 w-4" />
                 </Button>
               )}
-              <Button
-                size="icon"
-                className="rounded-full bg-primary/10 text-primary hover:bg-primary/20"
-              >
+              <Button size="icon" className="rounded-full bg-primary/10 text-primary hover:bg-primary/20">
                 <MessageCircle className="h-4 w-4" />
               </Button>
             </div>
@@ -483,7 +432,10 @@ export default function StoreDetail() {
             <h2 className="font-bold text-foreground">Features & Amenities</h2>
             <div className="space-y-2">
               {storeFeatures.map((feature, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                <div
+                  key={idx}
+                  className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
+                >
                   <span className="text-xs text-muted-foreground uppercase tracking-wide">{feature.label}</span>
                   <span className="text-sm font-medium text-foreground">{feature.value}</span>
                 </div>
@@ -504,17 +456,7 @@ export default function StoreDetail() {
                 </div>
               </div>
               <div className="absolute bottom-3 right-3">
-                <Button 
-                  size="icon" 
-                  className={`rounded-full shadow-lg ${
-                    hasValidLocation 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
-                  onClick={openMapLocation}
-                  disabled={!hasValidLocation}
-                  title={hasValidLocation ? "Open in Maps" : "Location coordinates not available"}
-                >
+                <Button size="icon" className="rounded-full bg-primary text-primary-foreground shadow-lg">
                   <MapPin className="h-4 w-4" />
                 </Button>
               </div>
@@ -527,19 +469,14 @@ export default function StoreDetail() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-foreground">Photo & Videos</h2>
-              <button 
-                className="text-sm text-primary font-medium"
-                onClick={() => openLightbox(0)}
-              >
-                See all
-              </button>
+              <button className="text-sm text-primary font-medium">See all</button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {allImages.slice(0, 6).map((img, idx) => (
                 <div
                   key={idx}
-                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
-                  onClick={() => openLightbox(idx)}
+                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
+                  onClick={() => setCurrentImageIndex(idx)}
                 >
                   <img
                     src={getImageUrl(img)}
@@ -552,11 +489,6 @@ export default function StoreDetail() {
                   {idx === 2 && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <Play className="h-8 w-8 text-white" />
-                    </div>
-                  )}
-                  {idx === 5 && allImages.length > 6 && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">+{allImages.length - 6}</span>
                     </div>
                   )}
                 </div>
@@ -660,22 +592,16 @@ export default function StoreDetail() {
                             <Star
                               key={i}
                               className={`h-3 w-3 ${
-                                i < review.rating
-                                  ? "fill-warning text-warning"
-                                  : "text-muted-foreground/30"
+                                i < review.rating ? "fill-warning text-warning" : "text-muted-foreground/30"
                               }`}
                             />
                           ))}
                         </div>
                       </div>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(review.created_at)}
-                    </span>
+                    <span className="text-xs text-muted-foreground">{formatTimeAgo(review.created_at)}</span>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    "{review.comment}"
-                  </p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">"{review.comment}"</p>
                 </motion.div>
               ))}
             </div>
@@ -762,101 +688,6 @@ export default function StoreDetail() {
           </Button>
         </div>
       </div>
-
-      {/* Fullscreen Lightbox */}
-      <AnimatePresence>
-        {lightboxOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
-            onClick={() => setLightboxOpen(false)}
-          >
-            {/* Close Button */}
-            <button
-              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-              onClick={() => setLightboxOpen(false)}
-            >
-              <X className="h-6 w-6" />
-            </button>
-
-            {/* Image Counter */}
-            <div className="absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white text-sm">
-              {lightboxIndex + 1} / {allImages.length}
-            </div>
-
-            {/* Previous Button */}
-            {allImages.length > 1 && (
-              <button
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxIndex((prev) => (prev === 0 ? allImages.length - 1 : prev - 1));
-                }}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-            )}
-
-            {/* Main Image */}
-            <motion.img
-              key={lightboxIndex}
-              src={getImageUrl(allImages[lightboxIndex])}
-              alt={`Gallery ${lightboxIndex + 1}`}
-              className="max-w-full max-h-full object-contain p-4"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-              onClick={(e) => e.stopPropagation()}
-              onError={(e) => {
-                e.currentTarget.src = "/placeholder.svg";
-              }}
-            />
-
-            {/* Next Button */}
-            {allImages.length > 1 && (
-              <button
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLightboxIndex((prev) => (prev === allImages.length - 1 ? 0 : prev + 1));
-                }}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            )}
-
-            {/* Thumbnail Strip */}
-            {allImages.length > 1 && (
-              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto scrollbar-hide">
-                {allImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLightboxIndex(idx);
-                    }}
-                    className={`flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border-2 transition-all ${
-                      lightboxIndex === idx ? "border-white scale-110" : "border-transparent opacity-60"
-                    }`}
-                  >
-                    <img
-                      src={getImageUrl(img)}
-                      alt={`Thumb ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg";
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <TabBar />
     </div>
