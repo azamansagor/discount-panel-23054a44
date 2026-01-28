@@ -158,23 +158,36 @@ export default function StoreDetail() {
     if (reviewsFetchedRef.current || loadingReviews) return;
 
     setLoadingReviews(true);
-    reviewsFetchedRef.current = true;
+    reviewsFetchedRef.current = true; // Mark as fetched immediately to prevent retries
 
     try {
-      const response = await fetch(`${API_ROOT}/stores/${storeId}/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ per_page: 100, page: 1 }),
-      });
+      // Try GET method first, fallback to POST if needed
+      let response = await fetch(`${API_ROOT}/stores/${storeId}/reviews?per_page=100&page=1`);
+      
+      // If GET fails with 405, try POST
+      if (response.status === 405) {
+        response = await fetch(`${API_ROOT}/stores/${storeId}/reviews`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ per_page: 100, page: 1 }),
+        });
+      }
 
-      if (!response.ok) throw new Error("Failed to fetch reviews");
+      if (!response.ok) {
+        // API error - show 0 reviews, don't retry
+        allReviewsRef.current = [];
+        setReviews([]);
+        return;
+      }
+      
       const data = await response.json();
-
       allReviewsRef.current = data.data || data.items || [];
       setReviews(allReviewsRef.current.slice(0, 3));
     } catch (error) {
       console.error("Error fetching reviews:", error);
-      reviewsFetchedRef.current = false;
+      // On error, show 0 reviews - don't reset ref to prevent infinite retries
+      allReviewsRef.current = [];
+      setReviews([]);
     } finally {
       setLoadingReviews(false);
     }
