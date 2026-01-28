@@ -20,11 +20,15 @@ import {
   Globe,
   Users,
   Tag,
+  X,
+  ChevronLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
+import { toast } from "@/hooks/use-toast";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -66,6 +70,8 @@ interface StoreDetails {
   owner_title?: string;
   owner_avatar?: string;
   features?: { label: string; value: string }[];
+  latitude?: number;
+  longitude?: number;
 }
 
 interface Product {
@@ -89,11 +95,19 @@ interface Review {
 export default function StoreDetail() {
   const { storeId } = useParams<{ storeId: string }>();
   const navigate = useNavigate();
-  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isInWishlist, toggleWishlist, removeFromWishlist } = useWishlist();
 
   const [store, setStore] = useState<StoreDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Lightbox state
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Remove wishlist drawer state
+  const [showRemoveDrawer, setShowRemoveDrawer] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Reviews state
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -126,6 +140,8 @@ export default function StoreDetail() {
           owner_name: raw.owner_name ?? "Store Owner",
           owner_title: raw.owner_title ?? "Store Manager",
           owner_avatar: raw.owner_avatar,
+          latitude: raw.latitude ?? raw.lat ?? undefined,
+          longitude: raw.longitude ?? raw.lng ?? raw.lon ?? undefined,
         });
       } catch (error) {
         console.error("Error fetching store:", error);
@@ -224,6 +240,80 @@ export default function StoreDetail() {
     return `${diffInMonths} months ago`;
   };
 
+  // Check if valid location exists
+  const hasValidLocation = store?.latitude != null && store?.longitude != null;
+
+  // Open map in OpenStreetMap
+  const openMapLocation = () => {
+    if (hasValidLocation && store) {
+      const url = `https://www.openstreetmap.org/?mlat=${store.latitude}&mlon=${store.longitude}&zoom=17`;
+      window.open(url, "_blank");
+    }
+  };
+
+  // Share functionality
+  const handleShare = async () => {
+    const shareData = {
+      title: store?.name || "Store",
+      text: `Check out ${store?.name}`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast({
+          title: "Link copied",
+          description: "Store link copied to clipboard",
+        });
+      }
+    } catch (error) {
+      // User cancelled or error
+      console.log("Share cancelled or failed");
+    }
+  };
+
+  // Wishlist toggle with confirmation for removal
+  const handleWishlistToggle = () => {
+    if (!store) return;
+    
+    if (isInWishlist("store", store.id)) {
+      setShowRemoveDrawer(true);
+    } else {
+      toggleWishlist("store", store.id, {
+        id: store.id,
+        name: store.name,
+        banner_image: store.banner_image,
+      });
+    }
+  };
+
+  // Confirm removal from wishlist
+  const handleConfirmRemove = async () => {
+    if (!store) return;
+    setIsRemoving(true);
+    await removeFromWishlist("store", store.id);
+    setIsRemoving(false);
+    setShowRemoveDrawer(false);
+  };
+
+  // Open lightbox
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
+
+  // Navigate lightbox
+  const navigateLightbox = (direction: "prev" | "next") => {
+    if (direction === "prev") {
+      setLightboxIndex((prev) => (prev > 0 ? prev - 1 : allImages.length - 1));
+    } else {
+      setLightboxIndex((prev) => (prev < allImages.length - 1 ? prev + 1 : 0));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-secondary/30 pb-20">
@@ -270,19 +360,18 @@ export default function StoreDetail() {
             variant="ghost"
             size="icon"
             className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
-            onClick={() => {
-              toggleWishlist("store", store.id, {
-                id: store.id,
-                name: store.name,
-                banner_image: store.banner_image,
-              });
-            }}
+            onClick={handleWishlistToggle}
           >
             <Heart
               className={`h-5 w-5 ${isInWishlist("store", store.id) ? "fill-destructive text-destructive" : ""}`}
             />
           </Button>
-          <Button variant="ghost" size="icon" className="bg-background/80 backdrop-blur-sm rounded-full shadow-md">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
+            onClick={handleShare}
+          >
             <Share2 className="h-5 w-5" />
           </Button>
         </div>
@@ -448,7 +537,16 @@ export default function StoreDetail() {
                 </div>
               </div>
               <div className="absolute bottom-3 right-3">
-                <Button size="icon" className="rounded-full bg-primary text-primary-foreground shadow-lg">
+                <Button
+                  size="icon"
+                  className={`rounded-full shadow-lg ${
+                    hasValidLocation
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  }`}
+                  onClick={openMapLocation}
+                  disabled={!hasValidLocation}
+                >
                   <MapPin className="h-4 w-4" />
                 </Button>
               </div>
@@ -461,14 +559,16 @@ export default function StoreDetail() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-foreground">Photo & Videos</h2>
-              <button className="text-sm text-primary font-medium">See all</button>
+              <button className="text-sm text-primary font-medium" onClick={() => openLightbox(0)}>
+                See all
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-2">
               {allImages.slice(0, 6).map((img, idx) => (
                 <div
                   key={idx}
                   className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
-                  onClick={() => setCurrentImageIndex(idx)}
+                  onClick={() => openLightbox(idx)}
                 >
                   <img
                     src={getImageUrl(img)}
@@ -668,6 +768,105 @@ export default function StoreDetail() {
       </div>
 
       <TabBar />
+
+      {/* Remove Wishlist Drawer */}
+      <RemoveWishlistDrawer
+        isOpen={showRemoveDrawer}
+        onClose={() => setShowRemoveDrawer(false)}
+        onConfirm={handleConfirmRemove}
+        item={store ? { id: store.id, name: store.name, banner_image: store.banner_image, address: store.address } : null}
+        type="store"
+        isLoading={isRemoving}
+      />
+
+      {/* Fullscreen Lightbox */}
+      <AnimatePresence>
+        {lightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex flex-col"
+          >
+            {/* Lightbox Header */}
+            <div className="flex items-center justify-between p-4 text-white">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+                onClick={() => setLightboxOpen(false)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+              <span className="text-sm">
+                {lightboxIndex + 1} / {allImages.length}
+              </span>
+              <div className="w-10" />
+            </div>
+
+            {/* Main Image */}
+            <div className="flex-1 relative flex items-center justify-center px-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute left-2 z-10 text-white hover:bg-white/20"
+                onClick={() => navigateLightbox("prev")}
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </Button>
+
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={lightboxIndex}
+                  src={getImageUrl(allImages[lightboxIndex])}
+                  alt={`Image ${lightboxIndex + 1}`}
+                  className="max-h-full max-w-full object-contain rounded-lg"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  onError={(e) => {
+                    e.currentTarget.src = "/placeholder.svg";
+                  }}
+                />
+              </AnimatePresence>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 z-10 text-white hover:bg-white/20"
+                onClick={() => navigateLightbox("next")}
+              >
+                <ChevronRight className="h-8 w-8" />
+              </Button>
+            </div>
+
+            {/* Thumbnail Strip */}
+            <div className="p-4">
+              <div className="flex gap-2 overflow-x-auto scrollbar-hide justify-center">
+                {allImages.map((img, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setLightboxIndex(idx)}
+                    className={`relative w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${
+                      lightboxIndex === idx ? "border-white" : "border-transparent opacity-50"
+                    }`}
+                  >
+                    <img
+                      src={getImageUrl(img)}
+                      alt={`Thumb ${idx + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
