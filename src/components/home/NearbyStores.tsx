@@ -3,6 +3,7 @@ import { MapPin, Clock, ChevronRight, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useWishlist } from "@/contexts/WishlistContext";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
 interface ApiStore {
   id: number;
@@ -62,6 +63,30 @@ export const NearbyStores = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const [removeDrawerOpen, setRemoveDrawerOpen] = useState(false);
+  const [itemToRemove, setItemToRemove] = useState<Store | null>(null);
+
+  const handleWishlistClick = (store: Store) => {
+    const storeId = parseInt(store.id);
+    if (isInWishlist('store', storeId)) {
+      setItemToRemove(store);
+      setRemoveDrawerOpen(true);
+    } else {
+      toggleWishlist('store', storeId, {
+        id: storeId,
+        name: store.name,
+        banner_image: store.image,
+      });
+    }
+  };
+
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      toggleWishlist('store', parseInt(itemToRemove.id));
+      setRemoveDrawerOpen(false);
+      setItemToRemove(null);
+    }
+  };
 
   useEffect(() => {
     fetchStores().then((data) => {
@@ -130,11 +155,7 @@ export const NearbyStores = () => {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  toggleWishlist('store', parseInt(store.id), {
-                    id: parseInt(store.id),
-                    name: store.name,
-                    banner_image: store.image,
-                  });
+                  handleWishlistClick(store);
                 }}
                 className="absolute top-1 right-1 w-6 h-6 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm"
               >
@@ -161,6 +182,22 @@ export const NearbyStores = () => {
           </motion.div>
         ))}
       </div>
+
+      <RemoveWishlistDrawer
+        isOpen={removeDrawerOpen}
+        onClose={() => {
+          setRemoveDrawerOpen(false);
+          setItemToRemove(null);
+        }}
+        onConfirm={handleConfirmRemove}
+        item={itemToRemove ? {
+          id: parseInt(itemToRemove.id),
+          name: itemToRemove.name,
+          banner_image: itemToRemove.image,
+          address: itemToRemove.location,
+        } : null}
+        type="store"
+      />
     </div>
   );
 };
