@@ -582,18 +582,53 @@ export default function StoreDetail() {
           </div>
         )}
 
+        {/* Photo & Videos */}
+        {allImages.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-foreground">Photo & Videos</h2>
+              <button className="text-sm text-primary font-medium" onClick={() => openLightbox(0)}>
+                See all
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {allImages.slice(0, 6).map((img, idx) => (
+                <div
+                  key={idx}
+                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
+                  onClick={() => openLightbox(idx)}
+                >
+                  <img
+                    src={getImageUrl(img)}
+                    alt={`Gallery ${idx + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = "/placeholder.svg";
+                    }}
+                  />
+                  {idx === 2 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Play className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Store Products */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-foreground">Products</h2>
-            {products.length > 4 && (
+            {products.length > 6 && (
               <button className="text-sm text-primary font-medium">See all</button>
             )}
           </div>
 
           {loadingProducts ? (
             <div className="grid grid-cols-2 gap-3">
-              {[...Array(4)].map((_, i) => (
+              {[...Array(6)].map((_, i) => (
                 <div key={i} className="bg-card rounded-2xl overflow-hidden shadow-sm">
                   <Skeleton className="aspect-square w-full" />
                   <div className="p-3 space-y-2">
@@ -605,7 +640,7 @@ export default function StoreDetail() {
             </div>
           ) : products.length > 0 ? (
             <div className="grid grid-cols-2 gap-3">
-              {products.slice(0, 4).map((product) => {
+              {products.slice(0, 6).map((product) => {
                 const discountPercent = product.discountPercent || 
                   (product.discounts?.[0]?.amount ? parseFloat(product.discounts[0].amount) : 0);
                 const originalPrice = parseFloat(product.price);
@@ -694,41 +729,6 @@ export default function StoreDetail() {
                   <MapPin className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Photo & Videos */}
-        {allImages.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-bold text-foreground">Photo & Videos</h2>
-              <button className="text-sm text-primary font-medium" onClick={() => openLightbox(0)}>
-                See all
-              </button>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {allImages.slice(0, 6).map((img, idx) => (
-                <div
-                  key={idx}
-                  className="relative aspect-square rounded-xl overflow-hidden cursor-pointer"
-                  onClick={() => openLightbox(idx)}
-                >
-                  <img
-                    src={getImageUrl(img)}
-                    alt={`Gallery ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = "/placeholder.svg";
-                    }}
-                  />
-                  {idx === 2 && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <Play className="h-8 w-8 text-white" />
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           </div>
         )}
