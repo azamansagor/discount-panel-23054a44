@@ -20,6 +20,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
+import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
+import { toast } from "sonner";
 
 const API_ROOT = "https://discountpanel.shop/api";
 const STORAGE_URL = "https://discountpanel.shop/storage";
@@ -73,7 +75,11 @@ interface Review {
 export default function ProductDetail() {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
-  const { isInWishlist, toggleWishlist } = useWishlist();
+  const { isInWishlist, toggleWishlist, removeFromWishlist } = useWishlist();
+
+  // Remove wishlist drawer state
+  const [showRemoveDrawer, setShowRemoveDrawer] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const [product, setProduct] = useState<ProductDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -319,19 +325,51 @@ export default function ProductDetail() {
   };
 
   const handleShare = async () => {
+    const shareData = {
+      title: product?.name || "Product",
+      text: `Check out ${product?.name}`,
+      url: window.location.href,
+    };
+
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: product?.name,
-          text: `Check out ${product?.name}`,
-          url: window.location.href,
-        });
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard");
       }
-    } catch (error) {
-      console.error("Error sharing:", error);
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
+        console.log("Share failed:", error);
+      }
     }
+  };
+
+  // Wishlist toggle with confirmation for removal
+  const handleWishlistToggle = () => {
+    if (!product) return;
+    
+    if (isInWishlist("product", product.id)) {
+      setShowRemoveDrawer(true);
+    } else {
+      toggleWishlist("product", product.id, {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        featured_image: product.featured_image,
+        store: product.store,
+        discounts: product.discounts,
+      });
+    }
+  };
+
+  // Confirm removal from wishlist
+  const handleConfirmRemove = async () => {
+    if (!product) return;
+    setIsRemoving(true);
+    await removeFromWishlist("product", product.id);
+    setIsRemoving(false);
+    setShowRemoveDrawer(false);
   };
 
   if (loading) {
@@ -418,16 +456,7 @@ export default function ProductDetail() {
             variant="ghost"
             size="icon"
             className="bg-background/80 backdrop-blur-sm rounded-full"
-            onClick={() => {
-              toggleWishlist('product', product.id, {
-                id: product.id,
-                name: product.name,
-                price: product.price,
-                featured_image: product.featured_image,
-                store: product.store,
-                discounts: product.discounts,
-              });
-            }}
+            onClick={handleWishlistToggle}
           >
             <Heart
               className={`h-5 w-5 transition-colors ${
@@ -776,6 +805,21 @@ export default function ProductDetail() {
 
 
       <TabBar />
+
+      {/* Remove Wishlist Drawer */}
+      <RemoveWishlistDrawer
+        isOpen={showRemoveDrawer}
+        onClose={() => setShowRemoveDrawer(false)}
+        onConfirm={handleConfirmRemove}
+        isLoading={isRemoving}
+        item={product ? {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          featured_image: product.featured_image,
+        } : null}
+        type="product"
+      />
     </div>
   );
 }
