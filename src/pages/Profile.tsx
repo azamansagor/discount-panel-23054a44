@@ -16,9 +16,7 @@ import TabBar from "@/components/layout/TabBar";
 import { useAuth } from "@/contexts/AuthContext";
 
 const menuItems = [
-  { icon: ShoppingBag, label: "My Orders", badge: "3" },
   { icon: Heart, label: "Wishlist", badge: "12" },
-  { icon: Ticket, label: "My Coupons", badge: "5" },
   { icon: Bell, label: "Notifications", badge: null, route: "/notifications" },
   { icon: Settings, label: "Settings", badge: null },
   { icon: HelpCircle, label: "Help & Support", badge: null },
