@@ -4,27 +4,29 @@ import {
   User,
   Settings,
   Heart,
-  ShoppingBag,
   Bell,
   HelpCircle,
   LogOut,
   LogIn,
   ChevronRight,
-  Ticket,
 } from "lucide-react";
 import TabBar from "@/components/layout/TabBar";
 import { useAuth } from "@/contexts/AuthContext";
-
-const menuItems = [
-  { icon: Heart, label: "Wishlist", badge: "12" },
-  { icon: Bell, label: "Notifications", badge: null, route: "/notifications" },
-  { icon: Settings, label: "Settings", badge: null },
-  { icon: HelpCircle, label: "Help & Support", badge: null },
-];
+import { useWishlist } from "@/contexts/WishlistContext";
 
 const Profile = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { getAllDisplayItems } = useWishlist();
+  
+  const wishlistCount = getAllDisplayItems().length;
+  
+  const menuItems = [
+    { icon: Heart, label: "Wishlist", badge: wishlistCount > 0 ? wishlistCount.toString() : null, route: "/wishlist" },
+    { icon: Bell, label: "Notifications", badge: null, route: "/notifications" },
+    { icon: Settings, label: "Settings", badge: null },
+    { icon: HelpCircle, label: "Help & Support", badge: null },
+  ];
 
   const handleLogout = () => {
     logout();
