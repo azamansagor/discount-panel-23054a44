@@ -21,7 +21,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
+import { useAuth } from "@/contexts/AuthContext";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
+import AddReviewForm from "@/components/reviews/AddReviewForm";
 import { toast } from "sonner";
 
 const API_ROOT = "https://discountpanel.shop/api";
@@ -77,6 +79,7 @@ export default function ProductDetail() {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist, removeFromWishlist } = useWishlist();
+  const { canAddReview } = useAuth();
 
   // Remove wishlist drawer state
   const [showRemoveDrawer, setShowRemoveDrawer] = useState(false);
@@ -743,6 +746,21 @@ export default function ProductDetail() {
             <h2 className="font-bold text-foreground">Reviews</h2>
             <span className="text-sm text-muted-foreground">({product.reviews_count || 0})</span>
           </div>
+
+          {/* Add Review Form - Only for non-admin logged-in users */}
+          {canAddReview && (
+            <AddReviewForm
+              type="product"
+              itemId={product.id}
+              onReviewAdded={() => {
+                reviewsFetchedRef.current = false;
+                setReviews([]);
+                setReviewsPage(1);
+                setHasMoreReviews(true);
+                fetchReviews(1, true);
+              }}
+            />
+          )}
 
           {/* Rating Summary */}
           <div className="bg-card rounded-2xl p-4 shadow-sm">

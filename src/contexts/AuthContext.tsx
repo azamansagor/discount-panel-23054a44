@@ -5,6 +5,7 @@ interface User {
   name: string;
   email: string;
   token: string;
+  type?: string;
 }
 
 interface AuthContextType {
@@ -13,6 +14,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isAuthenticated: boolean;
+  canAddReview: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -65,6 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         name: data.user?.name || email.split('@')[0],
         email: data.user?.email || email,
         token: data.token || data.access_token,
+        type: data.user?.type,
       };
 
       setUser(userData);
@@ -84,13 +87,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('auth_user');
   };
 
+  // Non-admin logged-in users can add reviews
+  const canAddReview = !!user && user.type !== 'admin';
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       isLoading, 
       login, 
       logout, 
-      isAuthenticated: !!user 
+      isAuthenticated: !!user,
+      canAddReview,
     }}>
       {children}
     </AuthContext.Provider>
