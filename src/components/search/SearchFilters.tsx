@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { MapPin, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
 
 interface SearchFiltersState {
   type: "all" | "stores" | "products";
@@ -82,7 +82,19 @@ const SearchFilters = ({
       <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl overflow-y-auto">
         <SheetHeader className="pb-4">
           <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-2" />
-          <SheetTitle className="text-xl font-bold">Filters</SheetTitle>
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <SheetTitle className="text-xl font-bold">Filters</SheetTitle>
+            <div className="h-10 w-10" />
+          </div>
         </SheetHeader>
 
         <div className="space-y-6 pb-6">
