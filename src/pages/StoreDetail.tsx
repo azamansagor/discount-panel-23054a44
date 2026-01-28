@@ -411,7 +411,7 @@ export default function StoreDetail() {
           variant="ghost"
           size="icon"
           className="bg-background/80 backdrop-blur-sm rounded-full shadow-md"
-          onClick={() => navigate(-1)}
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate('/home')}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
