@@ -582,6 +582,35 @@ export default function StoreDetail() {
           </div>
         )}
 
+        {/* Location Map */}
+        {store.address && (
+          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
+            <h2 className="font-bold text-foreground">Location Map</h2>
+            <div className="relative h-40 rounded-xl overflow-hidden bg-secondary">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">{store.address}</p>
+                </div>
+              </div>
+              <div className="absolute bottom-3 right-3">
+                <Button
+                  size="icon"
+                  className={`rounded-full shadow-lg ${
+                    hasValidLocation
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  }`}
+                  onClick={openMapLocation}
+                  disabled={!hasValidLocation}
+                >
+                  <MapPin className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Photo & Videos */}
         {allImages.length > 0 && (
           <div className="space-y-3">
@@ -703,35 +732,6 @@ export default function StoreDetail() {
             </div>
           )}
         </div>
-
-        {/* Location Map */}
-        {store.address && (
-          <div className="bg-card rounded-2xl p-4 shadow-sm space-y-3">
-            <h2 className="font-bold text-foreground">Location Map</h2>
-            <div className="relative h-40 rounded-xl overflow-hidden bg-secondary">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-8 w-8 text-primary mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">{store.address}</p>
-                </div>
-              </div>
-              <div className="absolute bottom-3 right-3">
-                <Button
-                  size="icon"
-                  className={`rounded-full shadow-lg ${
-                    hasValidLocation
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground cursor-not-allowed"
-                  }`}
-                  onClick={openMapLocation}
-                  disabled={!hasValidLocation}
-                >
-                  <MapPin className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Reviews Section */}
         <div className="space-y-4">
