@@ -38,7 +38,7 @@ interface SearchFiltersState {
 
 const Search = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const geolocation = useGeolocation();
   
@@ -334,11 +334,21 @@ const Search = () => {
           <button
             type="button"
             onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1);
-              } else {
-                navigate("/home");
+              // If the filters sheet is open, close it first (overlay blocks header clicks).
+              if (showFilters) {
+                setShowFilters(false);
+
+                // If we arrived via /search?openFilters=true, remove that flag so back works predictably.
+                if (searchParams.get("openFilters") === "true") {
+                  const next = new URLSearchParams(searchParams);
+                  next.delete("openFilters");
+                  setSearchParams(next, { replace: true });
+                }
+                return;
               }
+
+              if (window.history.length > 1) navigate(-1);
+              else navigate("/home");
             }}
             className="shrink-0 -ml-2 h-10 w-10 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors"
           >
