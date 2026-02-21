@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const API_ROOT = "https://discountpanel.shop/api";
 
@@ -10,6 +11,7 @@ interface SliderStore {
 }
 
 const ImageSlider = () => {
+  const navigate = useNavigate();
   const [stores, setStores] = useState<SliderStore[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -45,9 +47,9 @@ const ImageSlider = () => {
   if (loading) {
     return (
       <div className="px-4 pt-3">
-        <div className="flex gap-3 overflow-hidden">
-          <div className="w-[65%] h-40 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
-          <div className="w-[30%] h-40 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
+        <div className="flex gap-2.5">
+          <div className="w-[60%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
+          <div className="w-[35%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
         </div>
       </div>
     );
@@ -57,21 +59,22 @@ const ImageSlider = () => {
 
   return (
     <div className="px-4 pt-3">
-      <div className="relative overflow-hidden rounded-2xl">
+      <div className="overflow-hidden">
         <motion.div
-          className="flex gap-3"
-          animate={{ x: `-${currentIndex * 70}%` }}
+          className="flex gap-2.5"
+          animate={{ x: `-${currentIndex * 62.5}%` }}
           transition={{ type: "spring", stiffness: 200, damping: 30 }}
         >
           {stores.map((store) => (
             <div
               key={store.id}
-              className="w-[65%] flex-shrink-0 rounded-2xl overflow-hidden"
+              className="w-[60%] flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer"
+              onClick={() => navigate(`/store/${store.id}`)}
             >
               <img
                 src={store.featured_image || "/placeholder.svg"}
                 alt={store.name}
-                className="w-full h-40 object-cover"
+                className="w-full h-36 object-cover rounded-2xl"
                 onError={(e) => {
                   e.currentTarget.src = "/placeholder.svg";
                 }}
@@ -88,7 +91,7 @@ const ImageSlider = () => {
             key={i}
             onClick={() => setCurrentIndex(i)}
             className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === currentIndex ? "w-6 bg-primary" : "w-1.5 bg-muted-foreground/30"
+              i === currentIndex ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30"
             }`}
           />
         ))}

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bell, MapPin, ChevronDown, Heart, Star, ChevronRight, Loader2 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import SearchBar from "@/components/home/SearchBar";
+import ImageSlider from "@/components/home/ImageSlider";
 import CategoryTabs from "@/components/home/CategoryTabs";
 import FeaturedProducts from "@/components/home/FeaturedProducts";
 import NearbyStores from "@/components/home/NearbyStores";
@@ -138,6 +139,9 @@ const Home = () => {
 
       {/* Search */}
       <SearchBar />
+
+      {/* Image Slider */}
+      <ImageSlider />
 
       {/* Category Tabs */}
       <CategoryTabs />
