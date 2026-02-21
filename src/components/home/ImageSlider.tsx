@@ -22,7 +22,7 @@ const ImageSlider = () => {
         const response = await fetch(`${API_ROOT}/products/featured`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ per_page: 10, page: 1 }),
+          body: JSON.stringify({ per_page: 6, page: 1 }),
         });
         const data = await response.json();
         setProducts(data.data || []);
