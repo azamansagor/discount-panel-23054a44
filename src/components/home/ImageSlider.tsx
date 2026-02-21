@@ -78,7 +78,7 @@ const ImageSlider = () => {
                     onClick={() => navigate(`/product/${product.id}`)}
                   >
                     <img
-                      src={product.featured_image || "/placeholder.svg"}
+                      src={product.featured_image && product.featured_image.trim() !== "" ? product.featured_image : "/placeholder.svg"}
                       alt={product.name}
                       className="w-full h-36 object-cover"
                       onError={(e) => {
