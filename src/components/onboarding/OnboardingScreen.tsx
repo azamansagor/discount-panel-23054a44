@@ -30,16 +30,28 @@ export const OnboardingScreen = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const navigate = useNavigate();
 
+  // Skip onboarding if already seen
+  const hasSeenOnboarding = localStorage.getItem("onboarding_seen");
+  if (hasSeenOnboarding) {
+    navigate("/home", { replace: true });
+    return null;
+  }
+
+  const completeOnboarding = () => {
+    localStorage.setItem("onboarding_seen", "true");
+    navigate("/home", { replace: true });
+  };
+
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      navigate("/home");
+      completeOnboarding();
     }
   };
 
   const handleSkip = () => {
-    navigate("/home");
+    completeOnboarding();
   };
 
   return (
