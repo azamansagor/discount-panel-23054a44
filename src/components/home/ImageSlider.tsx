@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 const API_ROOT = "https://discountpanel.shop/api";
 
-interface SliderStore {
+interface FeaturedProduct {
   id: number;
   name: string;
   featured_image: string;
@@ -12,90 +12,101 @@ interface SliderStore {
 
 const ImageSlider = () => {
   const navigate = useNavigate();
-  const [stores, setStores] = useState<SliderStore[]>([]);
+  const [products, setProducts] = useState<FeaturedProduct[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStores = async () => {
+    const fetchFeatured = async () => {
       try {
-        const response = await fetch(`${API_ROOT}/stores`, {
+        const response = await fetch(`${API_ROOT}/products/featured`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ per_page: 6, page: 1 }),
+          body: JSON.stringify({ per_page: 10, page: 1 }),
         });
         const data = await response.json();
-        setStores(data.data || []);
+        setProducts(data.data || []);
       } catch (error) {
-        console.error("Error fetching slider stores:", error);
+        console.error("Error fetching featured products:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchStores();
+    fetchFeatured();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(products.length / 2));
 
   // Auto-slide
   useEffect(() => {
-    if (stores.length <= 1) return;
+    if (totalPages <= 1) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % stores.length);
+      setCurrentIndex((prev) => (prev + 1) % totalPages);
     }, 4000);
     return () => clearInterval(interval);
-  }, [stores.length]);
+  }, [totalPages]);
 
   if (loading) {
     return (
       <div className="px-4 pt-3">
         <div className="flex gap-2.5">
-          <div className="w-[60%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
-          <div className="w-[35%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
+          <div className="w-[48%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
+          <div className="w-[48%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
         </div>
       </div>
     );
   }
 
-  if (stores.length === 0) return null;
+  if (products.length === 0) return null;
 
   return (
     <div className="px-4 pt-3">
-      <div className="overflow-hidden">
+      <div className="overflow-hidden rounded-2xl">
         <motion.div
-          className="flex gap-2.5"
-          animate={{ x: `-${currentIndex * 62.5}%` }}
+          className="flex"
+          animate={{ x: `-${currentIndex * 100}%` }}
           transition={{ type: "spring", stiffness: 200, damping: 30 }}
         >
-          {stores.map((store) => (
-            <div
-              key={store.id}
-              className="w-[60%] flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer"
-              onClick={() => navigate(`/store/${store.id}`)}
-            >
-              <img
-                src={store.featured_image || "/placeholder.svg"}
-                alt={store.name}
-                className="w-full h-36 object-cover rounded-2xl"
-                onError={(e) => {
-                  e.currentTarget.src = "/placeholder.svg";
-                }}
-              />
-            </div>
-          ))}
+          {Array.from({ length: totalPages }).map((_, pageIdx) => {
+            const pair = products.slice(pageIdx * 2, pageIdx * 2 + 2);
+            return (
+              <div key={pageIdx} className="flex gap-2.5 w-full flex-shrink-0">
+                {pair.map((product) => (
+                  <div
+                    key={product.id}
+                    className="w-[calc(50%-5px)] flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer"
+                    onClick={() => navigate(`/product/${product.id}`)}
+                  >
+                    <img
+                      src={product.featured_image || "/placeholder.svg"}
+                      alt={product.name}
+                      className="w-full h-36 object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/placeholder.svg";
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })}
         </motion.div>
       </div>
 
       {/* Dots */}
-      <div className="flex justify-center gap-1.5 mt-3">
-        {stores.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
-              i === currentIndex ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30"
-            }`}
-          />
-        ))}
-      </div>
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-1.5 mt-3">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIndex(i)}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentIndex ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
