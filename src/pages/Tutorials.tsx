@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 interface Tutorial {
   id: number;
