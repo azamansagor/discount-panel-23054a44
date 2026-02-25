@@ -19,6 +19,8 @@ import Login from "./pages/Login";
 import Wishlist from "./pages/Wishlist";
 import Search from "./pages/Search";
 import Explore from "./pages/Explore";
+import Tutorials from "./pages/Tutorials";
+import TutorialDetail from "./pages/TutorialDetail";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +46,8 @@ const App = () => (
               <Route path="/store/:storeId/products" element={<StoreProducts />} />
               <Route path="/product/:productId" element={<ProductDetail />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/tutorials" element={<Tutorials />} />
+              <Route path="/tutorial/:tutorialId" element={<TutorialDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
