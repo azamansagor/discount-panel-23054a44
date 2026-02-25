@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Play, Clock, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 interface Tutorial {
   id: number;
