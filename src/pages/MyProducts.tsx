@@ -14,7 +14,7 @@ interface Product {
   price: number;
   featured_image: string;
   short_description: string;
-  discounts: Array<{ discount_type: string; discount_amount: number }>;
+  discounts: Array<{ discount_type: string; discount_amount?: number; amount?: string }>;
 }
 
 const MyProducts = () => {
@@ -64,8 +64,10 @@ const MyProducts = () => {
   const getDiscountedPrice = (product: Product) => {
     if (!product.discounts?.length) return null;
     const d = product.discounts[0];
-    if (d.discount_type === "percentage") return product.price * (1 - d.discount_amount / 100);
-    return product.price - d.discount_amount;
+    const price = Number(product.price);
+    const amount = Number(d.discount_amount || d.amount);
+    if (d.discount_type === "percentage") return price * (1 - amount / 100);
+    return price - amount;
   };
 
   return (
