@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE_URL = "https://a45d-103-179-24-40.ngrok-free.app/api";
+const API_BASE_URL = "https://discountpanel.shop/api";
 
 interface Category {
   id: number;
