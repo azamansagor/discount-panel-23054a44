@@ -127,11 +127,11 @@ const MyProducts = () => {
                     <div className="flex items-center gap-1.5 mt-1">
                       {discounted != null ? (
                         <>
-                          <span className="text-sm font-bold text-primary">${discounted.toFixed(2)}</span>
-                          <span className="text-xs text-muted-foreground line-through">${product.price.toFixed(2)}</span>
+                          <span className="text-sm font-bold text-primary">${Number(discounted).toFixed(2)}</span>
+                          <span className="text-xs text-muted-foreground line-through">${Number(product.price).toFixed(2)}</span>
                         </>
                       ) : (
-                        <span className="text-sm font-bold text-foreground">${product.price.toFixed(2)}</span>
+                        <span className="text-sm font-bold text-foreground">${Number(product.price).toFixed(2)}</span>
                       )}
                     </div>
                   </div>
