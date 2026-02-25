@@ -35,11 +35,18 @@ const MyProducts = () => {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/user/products?per_page=50`, {
+      const response = await fetch(`${API_BASE_URL}/user/store/products`, {
+        method: "POST",
         headers: {
+          "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${user?.token}`,
         },
+        body: JSON.stringify({
+          store_id: Number(storeId),
+          per_page: 50,
+          page: 1,
+        }),
       });
       const data = await response.json();
       if (data.success && data.data) {
