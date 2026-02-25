@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Clock } from "lucide-react";
+import { ArrowLeft, Play, Clock, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = "https://discountpanel.shop/api";
 
 interface Tutorial {
   id: number;
@@ -152,6 +152,14 @@ const Tutorials = () => {
         {isLoading && !initialLoading && (
           <div className="flex justify-center py-4">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {!initialLoading && !isLoading && tutorials.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <BookOpen className="w-12 h-12 text-muted-foreground/50 mb-3" />
+            <p className="text-base font-medium text-foreground">No tutorials found</p>
+            <p className="text-sm text-muted-foreground mt-1">Check back later for new tutorials</p>
           </div>
         )}
 
