@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Play, Clock, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+import { API_BASE_URL, BASE_DOMAIN } from "@/lib/api";
 
 interface Tutorial {
   id: number;
@@ -49,7 +49,7 @@ const TutorialDetail = () => {
 
   const getThumbnailUrl = (url: string) => {
     if (url?.startsWith("http://127.0.0.1")) {
-      return url.replace("http://127.0.0.1:8000", "https://discountpanel.shop");
+      return url.replace("http://127.0.0.1:8000", BASE_DOMAIN);
     }
     return url;
   };

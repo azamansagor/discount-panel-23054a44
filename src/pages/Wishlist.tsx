@@ -8,7 +8,7 @@ import TabBar from "@/components/layout/TabBar";
 import { Skeleton } from "@/components/ui/skeleton";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
-const API_BASE_URL = 'https://discountpanel.shop/api';
+import { API_BASE_URL } from '@/lib/api';
 
 interface ProductData {
   id: number;

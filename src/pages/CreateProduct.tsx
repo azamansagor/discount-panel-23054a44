@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface Category {
   id: number;

@@ -8,8 +8,7 @@ interface Category {
   icon: string;
 }
 
-const STORAGE_URL = "https://discountpanel.shop/storage";
-const API_ROOT = "https://discountpanel.shop/api";
+import { API_BASE_URL as API_ROOT, STORAGE_URL } from "@/lib/api";
 
 const fetchCategories = async (): Promise<Category[]> => {
   const response = await fetch(`${API_ROOT}/categories`, {

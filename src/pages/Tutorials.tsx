@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, Clock, BookOpen } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+import { API_BASE_URL, BASE_DOMAIN } from "@/lib/api";
 
 
 interface Tutorial {
@@ -76,7 +76,7 @@ const Tutorials = () => {
 
   const getThumbnailUrl = (url: string) => {
     if (url.startsWith("http://127.0.0.1")) {
-      return url.replace("http://127.0.0.1:8000", "https://discountpanel.shop");
+      return url.replace("http://127.0.0.1:8000", BASE_DOMAIN);
     }
     return url;
   };

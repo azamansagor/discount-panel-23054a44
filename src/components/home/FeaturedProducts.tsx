@@ -45,7 +45,7 @@ interface Product {
   storeName: string;
 }
 
-const API_ROOT = "https://discountpanel.shop/api";
+import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 const fetchProducts = async (): Promise<Product[]> => {
   const response = await fetch(`${API_ROOT}/products/featured`, {

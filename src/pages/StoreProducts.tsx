@@ -7,8 +7,7 @@ import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
-const API_ROOT = "https://discountpanel.shop/api";
-const STORAGE_URL = "https://discountpanel.shop/storage";
+import { API_BASE_URL as API_ROOT, STORAGE_URL } from "@/lib/api";
 
 interface Product {
   id: number;

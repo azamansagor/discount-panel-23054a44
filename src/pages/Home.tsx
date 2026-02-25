@@ -12,7 +12,7 @@ import TabBar from "@/components/layout/TabBar";
 import { useWishlist } from "@/contexts/WishlistContext";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
-const API_ROOT = "https://discountpanel.shop/api";
+import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 interface BestOfferProduct {
   id: number;

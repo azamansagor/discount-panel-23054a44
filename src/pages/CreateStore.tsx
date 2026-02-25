@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+import { API_BASE_URL } from "@/lib/api";
 
 const CreateStore = () => {
   const navigate = useNavigate();
