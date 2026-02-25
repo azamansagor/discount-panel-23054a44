@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 
-const API_ROOT = "https://discountpanel.shop/api";
+import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 interface FeaturedProduct {
   id: number;

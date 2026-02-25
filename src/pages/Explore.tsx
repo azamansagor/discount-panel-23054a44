@@ -9,8 +9,7 @@ import { useDebounce } from "@/hooks/useDebounce";
 import SearchSuggestions from "@/components/search/SearchSuggestions";
 import RemoveWishlistDrawer from "@/components/wishlist/RemoveWishlistDrawer";
 
-const API_ROOT = "https://discountpanel.shop/api";
-const STORAGE_URL = "https://discountpanel.shop/storage";
+import { API_BASE_URL as API_ROOT, STORAGE_URL } from "@/lib/api";
 
 interface ResultItem {
   id: number;

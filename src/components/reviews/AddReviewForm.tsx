@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-const API_ROOT = "https://discountpanel.shop/api";
+import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 interface AddReviewFormProps {
   type: "product" | "store";

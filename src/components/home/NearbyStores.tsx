@@ -28,7 +28,7 @@ interface Store {
   price: string;
 }
 
-const API_ROOT = "https://discountpanel.shop/api";
+import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 const fetchStores = async (): Promise<Store[]> => {
   const response = await fetch(`${API_ROOT}/stores`, {

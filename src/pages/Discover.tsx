@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useWishlist } from "@/contexts/WishlistContext";
 import "leaflet/dist/leaflet.css";
 
-const API_ROOT = "https://discountpanel.shop/api";
-const STORAGE_ROOT = "https://discountpanel.shop/storage/";
+import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 // Cache for geocoded locations to avoid repeated API calls
 const geocodeCache: Record<string, { lat: number; lon: number } | null> = {};

@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Store, MapPin, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import TabBar from "@/components/layout/TabBar";
 
-const API_BASE_URL = "https://discountpanel.shop/api";
+import { API_BASE_URL } from "@/lib/api";
 
 interface StoreItem {
   id: number;

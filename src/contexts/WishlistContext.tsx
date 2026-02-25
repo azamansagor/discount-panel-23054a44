@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import { useAuth } from './AuthContext';
 import { toast } from 'sonner';
 
-const API_BASE_URL = 'https://discountpanel.shop/api';
+import { API_BASE_URL } from '@/lib/api';
 
 interface WishlistItemData {
   id: number;

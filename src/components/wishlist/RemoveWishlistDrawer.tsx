@@ -30,7 +30,7 @@ interface RemoveWishlistDrawerProps {
   isLoading?: boolean;
 }
 
-const STORAGE_URL = "https://discountpanel.shop/storage";
+import { STORAGE_URL } from "@/lib/api";
 
 const RemoveWishlistDrawer = ({
   isOpen,
