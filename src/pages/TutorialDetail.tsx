@@ -39,7 +39,7 @@ const TutorialDetail = () => {
         .then((r) => r.json())
         .then((data) => {
           if (data.success) {
-            const found = data.videos.find((v: Tutorial) => v.id === Number(tutorialId));
+            const found = data.tutorials.find((v: Tutorial) => v.id === Number(tutorialId));
             if (found) setTutorial(found);
           }
         })

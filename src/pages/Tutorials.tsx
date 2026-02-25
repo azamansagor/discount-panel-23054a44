@@ -38,8 +38,8 @@ const Tutorials = () => {
         { headers: { Accept: "application/json" } }
       );
       const data = await response.json();
-      if (data.success && data.videos) {
-        setTutorials((prev) => pageNum === 1 ? data.videos : [...prev, ...data.videos]);
+      if (data.success && data.tutorials) {
+        setTutorials((prev) => pageNum === 1 ? data.tutorials : [...prev, ...data.tutorials]);
         setHasMore(pageNum < data.pagination.last_page);
       } else {
         setHasMore(false);
