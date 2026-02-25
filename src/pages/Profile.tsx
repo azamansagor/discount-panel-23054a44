@@ -10,6 +10,7 @@ import {
   LogOut,
   LogIn,
   ChevronRight,
+  Store,
 } from "lucide-react";
 import TabBar from "@/components/layout/TabBar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,6 +24,7 @@ const Profile = () => {
   const wishlistCount = getAllDisplayItems().length;
   
   const menuItems = [
+    ...(isAuthenticated ? [{ icon: Store, label: "My Store", badge: null, route: "/my-stores" }] : []),
     { icon: Heart, label: "Wishlist", badge: wishlistCount > 0 ? wishlistCount.toString() : null, route: "/wishlist" },
     { icon: Bell, label: "Notifications", badge: null, route: "/notifications" },
     { icon: BookOpen, label: "Tutorials", badge: null, route: "/tutorials" },
