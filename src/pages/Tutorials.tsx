@@ -6,51 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const API_BASE_URL = "https://discountpanel.shop/api";
 
-const DUMMY_TUTORIALS: Tutorial[] = Array.from({ length: 15 }, (_, i) => ({
-  id: i + 1,
-  title: [
-    "How to Find Best Deals",
-    "Using Discount Coupons",
-    "Store Navigation Guide",
-    "Cashback Tutorial",
-    "Wishlist Management",
-    "Price Comparison Tips",
-    "Seasonal Sale Guide",
-    "Refer & Earn Program",
-    "Payment Methods Guide",
-    "Account Setup Tutorial",
-    "Push Notifications Setup",
-    "Search Filters Guide",
-    "Product Reviews Guide",
-    "Return Policy Overview",
-    "Customer Support Guide",
-  ][i],
-  description: [
-    "Learn how to find the best deals and save money on your favorite products.",
-    "Step by step guide on applying discount coupons at checkout.",
-    "Navigate through stores easily and find what you need quickly.",
-    "Understand how cashback works and maximize your savings.",
-    "Organize and manage your wishlist for a better shopping experience.",
-    "Compare prices across multiple stores to get the best value.",
-    "Tips and tricks to make the most of seasonal sales events.",
-    "Learn how to refer friends and earn rewards in the process.",
-    "A complete guide to all available payment methods.",
-    "Set up your account with all the features enabled.",
-    "Configure push notifications to never miss a deal.",
-    "Use advanced search filters to find exactly what you want.",
-    "Write and read product reviews to make informed decisions.",
-    "Everything you need to know about our return policies.",
-    "How to reach customer support and get help quickly.",
-  ][i],
-  duration: [`${Math.floor(Math.random() * 10) + 1}:${String(Math.floor(Math.random() * 60)).padStart(2, "0")}`, `${Math.floor(Math.random() * 10) + 1}:${String(Math.floor(Math.random() * 60)).padStart(2, "0")}`][0],
-  thumbnail: "",
-  video_url: i % 3 === 0 ? "https://www.youtube.com/watch?v=dQw4w9WgXcQ" : "",
-  is_active: true,
-  sort_order: i,
-  created_at: new Date(Date.now() - i * 86400000).toISOString(),
-}));
-
-const USE_DUMMY = true; // Toggle this to false to use real API
 
 interface Tutorial {
   id: number;
@@ -79,26 +34,16 @@ const Tutorials = () => {
     loadingRef.current = true;
     setIsLoading(true);
     try {
-      if (USE_DUMMY) {
-        // Simulate API delay
-        await new Promise((r) => setTimeout(r, 500));
-        const perPage = 10;
-        const start = (pageNum - 1) * perPage;
-        const slice = DUMMY_TUTORIALS.slice(start, start + perPage);
-        setTutorials((prev) => pageNum === 1 ? slice : [...prev, ...slice]);
-        setHasMore(start + perPage < DUMMY_TUTORIALS.length);
+      const response = await fetch(
+        `${API_BASE_URL}/tutorials?per_page=10&page=${pageNum}`,
+        { headers: { Accept: "application/json" } }
+      );
+      const data = await response.json();
+      if (data.success && data.tutorials) {
+        setTutorials((prev) => pageNum === 1 ? data.tutorials : [...prev, ...data.tutorials]);
+        setHasMore(pageNum < data.pagination.last_page);
       } else {
-        const response = await fetch(
-          `${API_BASE_URL}/tutorials?per_page=10&page=${pageNum}`,
-          { headers: { Accept: "application/json" } }
-        );
-        const data = await response.json();
-        if (data.success && data.tutorials) {
-          setTutorials((prev) => pageNum === 1 ? data.tutorials : [...prev, ...data.tutorials]);
-          setHasMore(pageNum < data.pagination.last_page);
-        } else {
-          setHasMore(false);
-        }
+        setHasMore(false);
       }
     } catch {
       setHasMore(false);
