@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE_URL = "https://a45d-103-179-24-40.ngrok-free.app/api";
+const API_BASE_URL = "https://discountpanel.shop/api";
 
 const CreateStore = () => {
   const navigate = useNavigate();
