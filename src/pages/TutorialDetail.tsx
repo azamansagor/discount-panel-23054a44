@@ -33,10 +33,8 @@ const TutorialDetail = () => {
   useEffect(() => {
     if (!tutorial && tutorialId) {
       // Fetch single tutorial if navigated directly
-      fetch(`${API_BASE_URL}/tutorials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ per_page: 50, page: 1 }),
+      fetch(`${API_BASE_URL}/tutorials?per_page=50&page=1`, {
+        headers: { Accept: "application/json" },
       })
         .then((r) => r.json())
         .then((data) => {

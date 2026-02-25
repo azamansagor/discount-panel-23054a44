@@ -25,51 +25,53 @@ const Tutorials = () => {
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const fetchTutorials = useCallback(async (pageNum: number) => {
-    if (isLoading) return;
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/tutorials`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ per_page: 10, page: pageNum }),
-      });
+      const response = await fetch(
+        `${API_BASE_URL}/tutorials?per_page=10&page=${pageNum}`,
+        { headers: { Accept: "application/json" } }
+      );
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.videos) {
         setTutorials((prev) => pageNum === 1 ? data.videos : [...prev, ...data.videos]);
         setHasMore(pageNum < data.pagination.last_page);
+      } else {
+        setHasMore(false);
       }
     } catch {
-      // silent
+      setHasMore(false);
     } finally {
+      loadingRef.current = false;
       setIsLoading(false);
       setInitialLoading(false);
     }
-  }, [isLoading]);
-
-  useEffect(() => {
-    fetchTutorials(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!hasMore || isLoading) return;
-    observerRef.current?.disconnect();
-    observerRef.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !isLoading) {
+    fetchTutorials(1);
+  }, [fetchTutorials]);
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !loadingRef.current && hasMore) {
         setPage((p) => {
           const next = p + 1;
           fetchTutorials(next);
           return next;
         });
       }
-    });
-    if (sentinelRef.current) observerRef.current.observe(sentinelRef.current);
-    return () => observerRef.current?.disconnect();
-  }, [hasMore, isLoading, fetchTutorials]);
+    }, { threshold: 0.1 });
+    const el = sentinelRef.current;
+    if (el) observer.observe(el);
+    return () => { if (el) observer.unobserve(el); };
+  }, [hasMore, fetchTutorials]);
 
   const getThumbnailUrl = (url: string) => {
     if (url.startsWith("http://127.0.0.1")) {
