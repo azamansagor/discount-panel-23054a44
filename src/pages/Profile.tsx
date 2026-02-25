@@ -5,6 +5,7 @@ import {
   Settings,
   Heart,
   Bell,
+  BookOpen,
   HelpCircle,
   LogOut,
   LogIn,
@@ -24,6 +25,7 @@ const Profile = () => {
   const menuItems = [
     { icon: Heart, label: "Wishlist", badge: wishlistCount > 0 ? wishlistCount.toString() : null, route: "/wishlist" },
     { icon: Bell, label: "Notifications", badge: null, route: "/notifications" },
+    { icon: BookOpen, label: "Tutorials", badge: null, route: "/tutorials" },
     { icon: Settings, label: "Settings", badge: null },
     { icon: HelpCircle, label: "Help & Support", badge: null },
   ];
