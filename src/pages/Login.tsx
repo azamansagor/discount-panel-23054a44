@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { Capacitor } from "@capacitor/core";
+import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
 
 declare global {
   interface Window {
@@ -24,6 +26,15 @@ declare global {
 
 const GOOGLE_CLIENT_ID = "981627527365-794hqties3q3ru19hbkjnrjq6p16tu3f.apps.googleusercontent.com";
 
+// Initialize GoogleAuth for native platforms
+if (Capacitor.isNativePlatform()) {
+  GoogleAuth.initialize({
+    clientId: GOOGLE_CLIENT_ID,
+    scopes: ["profile", "email"],
+    grantOfflineAccess: true,
+  });
+}
+
 const Login = () => {
   const navigate = useNavigate();
   const { login, googleLogin } = useAuth();
@@ -34,16 +45,19 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const handleGoogleSignIn = () => {
-    if (!window.google) {
-      toast({ title: "Error", description: "Google Sign-In not loaded. Please try again.", variant: "destructive" });
-      return;
-    }
+  const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: async (response: any) => {
-        const result = await googleLogin(response.credential);
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Native: use Capacitor Google Auth plugin
+        const googleUser = await GoogleAuth.signIn();
+        const idToken = googleUser.authentication.idToken;
+        if (!idToken) {
+          toast({ title: "Error", description: "Failed to get Google token.", variant: "destructive" });
+          setIsGoogleLoading(false);
+          return;
+        }
+        const result = await googleLogin(idToken);
         setIsGoogleLoading(false);
         if (result.success) {
           toast({ title: "Success", description: "Welcome!" });
@@ -51,14 +65,37 @@ const Login = () => {
         } else {
           toast({ title: "Login Failed", description: result.error, variant: "destructive" });
         }
-      },
-    });
-    window.google.accounts.id.prompt((notification: any) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        setIsGoogleLoading(false);
-        toast({ title: "Google Sign-In", description: "Popup was blocked or dismissed. Try again.", variant: "destructive" });
+      } else {
+        // Web: use Google Identity Services
+        if (!window.google) {
+          toast({ title: "Error", description: "Google Sign-In not loaded. Please try again.", variant: "destructive" });
+          setIsGoogleLoading(false);
+          return;
+        }
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async (response: any) => {
+            const result = await googleLogin(response.credential);
+            setIsGoogleLoading(false);
+            if (result.success) {
+              toast({ title: "Success", description: "Welcome!" });
+              navigate("/home");
+            } else {
+              toast({ title: "Login Failed", description: result.error, variant: "destructive" });
+            }
+          },
+        });
+        window.google.accounts.id.prompt((notification: any) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            setIsGoogleLoading(false);
+            toast({ title: "Google Sign-In", description: "Popup was blocked or dismissed. Try again.", variant: "destructive" });
+          }
+        });
       }
-    });
+    } catch (error: any) {
+      setIsGoogleLoading(false);
+      toast({ title: "Error", description: error?.message || "Google Sign-In failed.", variant: "destructive" });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
