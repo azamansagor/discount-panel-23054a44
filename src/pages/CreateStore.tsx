@@ -207,10 +207,13 @@ const CreateStore = () => {
         });
       }
 
-      // Social contacts
+      // Social contacts - send as array format
       const validSocials = socialContacts.filter((s) => s.value.trim());
       if (validSocials.length) {
-        formData.append("social_contacts", JSON.stringify(validSocials));
+        validSocials.forEach((s, i) => {
+          formData.append(`social_contacts[${i}][type]`, s.type);
+          formData.append(`social_contacts[${i}][value]`, s.value);
+        });
       }
 
       const response = await fetch(`${API_BASE_URL}/user/stores`, {
