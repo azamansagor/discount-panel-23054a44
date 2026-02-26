@@ -49,9 +49,9 @@ const ImageSlider = () => {
     return (
       <div className="px-4 pt-3">
         <div className="flex gap-2 items-center justify-center">
-          <div className="w-[30%] h-24 bg-secondary rounded-2xl animate-pulse" />
-          <div className="w-[40%] h-28 bg-secondary rounded-2xl animate-pulse" />
-          <div className="w-[30%] h-24 bg-secondary rounded-2xl animate-pulse" />
+          <div className="w-[25%] h-24 bg-secondary rounded-2xl animate-pulse" />
+          <div className="w-[45%] h-28 bg-secondary rounded-2xl animate-pulse" />
+          <div className="w-[25%] h-24 bg-secondary rounded-2xl animate-pulse" />
         </div>
       </div>
     );
@@ -80,7 +80,7 @@ const ImageSlider = () => {
               key={`${position}-${product.id}`}
               layout
               className={`rounded-2xl overflow-hidden cursor-pointer flex-shrink-0 ${
-                isCenter ? "w-[40%] h-28 shadow-lg z-10" : "w-[28%] h-24 opacity-70"
+                isCenter ? "w-[45%] h-28 shadow-lg z-10" : "w-[25%] h-24 opacity-70"
               }`}
               onClick={() => {
                 if (isCenter) {
