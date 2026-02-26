@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Plus, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +39,8 @@ const EditProduct = () => {
     delivery_radius: "",
   });
   const [isAnywhereDelivery, setIsAnywhereDelivery] = useState(true);
+  const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
+  const [specifications, setSpecifications] = useState<{ key: string; value: string }[]>([]);
   const [discountEnabled, setDiscountEnabled] = useState(false);
   const [discount, setDiscount] = useState({
     discount_title: "",
@@ -128,6 +130,12 @@ const EditProduct = () => {
         setExistingGallery(product.gallery_images);
         setGalleryPreviews(product.gallery_images);
       }
+      if (product.key_features?.length) {
+        setKeyFeatures(product.key_features);
+      }
+      if (product.specifications?.length) {
+        setSpecifications(product.specifications);
+      }
       if (product.discounts?.length) {
         const d = product.discounts[0];
         setDiscountEnabled(true);
@@ -203,6 +211,8 @@ const EditProduct = () => {
       if (form.affiliate_link) body.affiliate_link = form.affiliate_link;
       if (!isAnywhereDelivery && form.delivery_radius) body.delivery_radius = Number(form.delivery_radius);
       if (selectedCategories.length) body.category_ids = selectedCategories;
+      if (keyFeatures.filter(f => f.trim()).length) body.key_features = keyFeatures.filter(f => f.trim());
+      if (specifications.filter(s => s.key.trim()).length) body.specifications = specifications.filter(s => s.key.trim());
 
       if (discountEnabled) {
         body.discount_enabled = 1;
@@ -216,7 +226,12 @@ const EditProduct = () => {
       // Always use FormData to support file uploads
       const formData = new FormData();
       Object.entries(body).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
+        if (key === 'specifications' && Array.isArray(value)) {
+          value.forEach((spec: { key: string; value: string }, i: number) => {
+            formData.append(`${key}[${i}][key]`, spec.key);
+            formData.append(`${key}[${i}][value]`, spec.value);
+          });
+        } else if (Array.isArray(value)) {
           value.forEach((v) => formData.append(`${key}[]`, v.toString()));
         } else {
           formData.append(key, String(value));
@@ -355,25 +370,108 @@ const EditProduct = () => {
         {/* Categories */}
         {categories.length > 0 && (
           <div>
-            <Label>Categories</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
+            <Label>Category</Label>
+            <select
+              value={selectedCategories[0] || ""}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                setSelectedCategories(val ? [val] : []);
+              }}
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Select a category</option>
               {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => toggleCategory(cat.id)}
-                  className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                    selectedCategories.includes(cat.id)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary text-foreground border-border"
-                  }`}
-                >
-                  {cat.name}
-                </button>
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
-            </div>
+            </select>
           </div>
         )}
+
+        {/* Key Features */}
+        <div className="space-y-3 p-4 bg-card rounded-xl border border-border/50">
+          <div className="flex items-center justify-between">
+            <Label className="text-base font-semibold">Key Features</Label>
+            <button
+              type="button"
+              onClick={() => setKeyFeatures((prev) => [...prev, ""])}
+              className="p-1.5 bg-primary text-primary-foreground rounded-full"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          {keyFeatures.map((feature, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <Input
+                value={feature}
+                onChange={(e) => {
+                  const updated = [...keyFeatures];
+                  updated[i] = e.target.value;
+                  setKeyFeatures(updated);
+                }}
+                placeholder={`Feature ${i + 1}`}
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setKeyFeatures((prev) => prev.filter((_, idx) => idx !== i))}
+                className="p-1.5 text-destructive hover:bg-destructive/10 rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          {keyFeatures.length === 0 && (
+            <p className="text-sm text-muted-foreground">No key features added yet.</p>
+          )}
+        </div>
+
+        {/* Specifications */}
+        <div className="space-y-3 p-4 bg-card rounded-xl border border-border/50">
+          <div className="flex items-center justify-between">
+            <Label className="text-base font-semibold">Specifications</Label>
+            <button
+              type="button"
+              onClick={() => setSpecifications((prev) => [...prev, { key: "", value: "" }])}
+              className="p-1.5 bg-primary text-primary-foreground rounded-full"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          {specifications.map((spec, i) => (
+            <div key={i} className="flex gap-2 items-center">
+              <Input
+                value={spec.key}
+                onChange={(e) => {
+                  const updated = [...specifications];
+                  updated[i] = { ...updated[i], key: e.target.value };
+                  setSpecifications(updated);
+                }}
+                placeholder="Key (e.g. Weight)"
+                className="flex-1"
+              />
+              <Input
+                value={spec.value}
+                onChange={(e) => {
+                  const updated = [...specifications];
+                  updated[i] = { ...updated[i], value: e.target.value };
+                  setSpecifications(updated);
+                }}
+                placeholder="Value (e.g. 500g)"
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setSpecifications((prev) => prev.filter((_, idx) => idx !== i))}
+                className="p-1.5 text-destructive hover:bg-destructive/10 rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          {specifications.length === 0 && (
+            <p className="text-sm text-muted-foreground">No specifications added yet.</p>
+          )}
+        </div>
 
         {/* Discount */}
         <div className="space-y-3 p-4 bg-card rounded-xl border border-border/50">
