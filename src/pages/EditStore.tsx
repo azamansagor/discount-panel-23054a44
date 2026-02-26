@@ -250,11 +250,6 @@ const EditStore = () => {
         formData.append('social_contacts[]', '');
       }
 
-      // Debug: log FormData entries
-      console.log('FormData social_contacts entries:');
-      for (const [key, value] of formData.entries()) {
-        if (key.includes('social')) console.log(key, '=', value);
-      }
 
       const response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
         method: "POST",
