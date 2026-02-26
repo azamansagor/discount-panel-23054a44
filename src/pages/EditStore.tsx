@@ -1,4 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+
+const stripHtml = (html: string) => {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  return doc.body.textContent || "";
+};
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Upload, Plus, X, Clock, MapPin, Navigation } from "lucide-react";
@@ -92,7 +97,7 @@ const EditStore = () => {
 
       setForm({
         name: store.name || "",
-        description: store.description || "",
+        description: stripHtml(store.description || ""),
         location_name: store.location_name || store.address || "",
         email: store.email || "",
         phone: store.phone || "",
