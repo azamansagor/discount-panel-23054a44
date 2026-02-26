@@ -86,11 +86,11 @@ const CreateStore = () => {
       const response = await fetch(`${API_BASE_URL}/categories`, {
         method: "POST",
         headers: { Accept: "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ per_page: 100, page: 1 }),
       });
       const data = await response.json();
-      if (data.success && data.categories) {
-        setCategories(data.categories);
+      if (data.success && data.data) {
+        setCategories(data.data);
       }
     } catch {}
   };
