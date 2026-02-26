@@ -6,6 +6,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-lea
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/contexts/AuthContext";
+import { requestAndGetLocation } from "@/lib/geolocation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -195,13 +196,13 @@ const EditStore = () => {
     } catch {}
   }, []);
 
-  const useMyLocation = useCallback(() => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      (pos) => handleMapClick(pos.coords.latitude, pos.coords.longitude),
-      () => toast({ title: "Could not get your location", variant: "destructive" }),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+  const useMyLocation = useCallback(async () => {
+    try {
+      const { latitude, longitude } = await requestAndGetLocation();
+      handleMapClick(latitude, longitude);
+    } catch {
+      toast({ title: "Could not get your location. Please grant location permission.", variant: "destructive" });
+    }
   }, [handleMapClick, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
