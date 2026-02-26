@@ -65,8 +65,8 @@ const EditProduct = () => {
         body: JSON.stringify({}),
       });
       const data = await response.json();
-      if (data.success && data.categories) {
-        setCategories(data.categories);
+      if (data.success && (data.data || data.categories)) {
+        setCategories(data.data || data.categories);
       }
     } catch {}
   };
