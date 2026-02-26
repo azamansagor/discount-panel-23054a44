@@ -212,6 +212,7 @@ const EditStore = () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
+      formData.append("_method", "PUT");
       Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
       if (latitude) formData.append("latitude", latitude);
       if (longitude) formData.append("longitude", longitude);
@@ -247,7 +248,7 @@ const EditStore = () => {
       }
 
       const response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
-        method: "PUT",
+        method: "POST",
         headers: { Accept: "application/json", Authorization: `Bearer ${user?.token}` },
         body: formData,
       });
