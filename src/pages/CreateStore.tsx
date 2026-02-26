@@ -349,7 +349,7 @@ const CreateStore = () => {
                       key={cat.id}
                       type="button"
                       onClick={() => toggleCategory(cat.id)}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors"
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-popover-foreground hover:bg-secondary transition-colors"
                     >
                       <div
                         className={`w-4 h-4 rounded border flex items-center justify-center ${
