@@ -71,7 +71,7 @@ const CreateStore = () => {
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
   const [galleryImages, setGalleryImages] = useState<File[]>([]);
   const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string }>>(
-    Object.fromEntries(DAYS.map((d) => [d, { open: "", close: "" }]))
+    Object.fromEntries(DAYS.map((d) => [d, { open: "", close: "" }])),
   );
   const [socialContacts, setSocialContacts] = useState<{ type: string; value: string }[]>([]);
   const [showBusinessHours, setShowBusinessHours] = useState(false);
@@ -122,9 +122,7 @@ const CreateStore = () => {
   };
 
   const toggleCategory = (id: number) => {
-    setSelectedCategories((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
-    );
+    setSelectedCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
   const addSocialContact = () => {
@@ -149,9 +147,7 @@ const CreateStore = () => {
     setMapCenter([lat, lng]);
     // Reverse geocode to get location name
     try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`
-      );
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`);
       const data = await res.json();
       if (data.display_name) {
         handleChange("location_name", data.display_name.split(",").slice(0, 3).join(",").trim());
@@ -167,7 +163,7 @@ const CreateStore = () => {
         handleMapClick(lat, lng);
       },
       () => toast({ title: "Could not get your location", variant: "destructive" }),
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000 },
     );
   }, [handleMapClick, toast]);
 
@@ -184,7 +180,9 @@ const CreateStore = () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
+      Object.entries(form).forEach(([k, v]) => {
+        if (v) formData.append(k, v);
+      });
       if (latitude) formData.append("latitude", latitude);
       if (longitude) formData.append("longitude", longitude);
       if (bannerImage) formData.append("banner_image", bannerImage);
@@ -194,11 +192,14 @@ const CreateStore = () => {
       // Business hours
       const hasHours = Object.values(businessHours).some((h) => h.open || h.close);
       if (hasHours) {
-        formData.append("business_hours", JSON.stringify(
-          Object.fromEntries(
-            Object.entries(businessHours).map(([day, h]) => [day, { open: h.open || null, close: h.close || null }])
-          )
-        ));
+        formData.append(
+          "business_hours",
+          JSON.stringify(
+            Object.fromEntries(
+              Object.entries(businessHours).map(([day, h]) => [day, { open: h.open || null, close: h.close || null }]),
+            ),
+          ),
+        );
       }
 
       // Social contacts
@@ -289,7 +290,13 @@ const CreateStore = () => {
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Store Name *</Label>
-            <Input id="name" value={form.name} onChange={(e) => handleChange("name", e.target.value)} placeholder="Enter store name" className="mt-1" />
+            <Input
+              id="name"
+              value={form.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+              placeholder="Enter store name"
+              className="mt-1"
+            />
           </div>
           <div>
             <Label htmlFor="description">Description</Label>
@@ -301,140 +308,185 @@ const CreateStore = () => {
               className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px]"
             />
           </div>
-        {/* Store Location Section */}
-        <div className="space-y-3 p-4 bg-card rounded-xl border border-border/50">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-2 text-base font-semibold text-foreground">
-              <MapPin className="w-4 h-4" /> Store Location
-            </span>
+          {/* Categories */}
+          <div className="relative">
+            <Label>Categories *</Label>
             <button
               type="button"
-              onClick={useMyLocation}
-              className="flex items-center gap-1 text-xs text-primary font-medium"
+              onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+              className="mt-1 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Navigation className="w-3 h-3" /> Use My Location
+              <span className={selectedCategories.length ? "text-foreground" : "text-muted-foreground"}>
+                {selectedCategories.length
+                  ? categories
+                      .filter((c) => selectedCategories.includes(c.id))
+                      .map((c) => c.name)
+                      .join(", ")
+                  : "Select categories"}
+              </span>
+              <svg
+                className={`w-4 h-4 text-muted-foreground transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
+            {categoryDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
+                {categories.length > 0 ? (
+                  categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => toggleCategory(cat.id)}
+                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors"
+                    >
+                      <div
+                        className={`w-4 h-4 rounded border flex items-center justify-center ${
+                          selectedCategories.includes(cat.id) ? "bg-primary border-primary" : "border-input"
+                        }`}
+                      >
+                        {selectedCategories.includes(cat.id) && (
+                          <svg
+                            className="w-3 h-3 text-primary-foreground"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </div>
+                      {cat.name}
+                    </button>
+                  ))
+                ) : (
+                  <p className="px-3 py-2 text-sm text-muted-foreground">Loading...</p>
+                )}
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          {/* Store Location Section */}
+          <div className="space-y-3 p-4 bg-card rounded-xl border border-border/50">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+                <MapPin className="w-4 h-4" /> Store Location
+              </span>
+              <button
+                type="button"
+                onClick={useMyLocation}
+                className="flex items-center gap-1 text-xs text-primary font-medium"
+              >
+                <Navigation className="w-3 h-3" /> Use My Location
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="latitude" className="text-xs">
+                  Latitude
+                </Label>
+                <Input
+                  id="latitude"
+                  type="number"
+                  step="any"
+                  value={latitude}
+                  onChange={(e) => {
+                    setLatitude(e.target.value);
+                    const lat = parseFloat(e.target.value);
+                    const lng = parseFloat(longitude);
+                    if (!isNaN(lat) && !isNaN(lng)) setMapCenter([lat, lng]);
+                  }}
+                  placeholder="e.g., 23.8103"
+                  className="mt-1 h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label htmlFor="longitude" className="text-xs">
+                  Longitude
+                </Label>
+                <Input
+                  id="longitude"
+                  type="number"
+                  step="any"
+                  value={longitude}
+                  onChange={(e) => {
+                    setLongitude(e.target.value);
+                    const lat = parseFloat(latitude);
+                    const lng = parseFloat(e.target.value);
+                    if (!isNaN(lat) && !isNaN(lng)) setMapCenter([lat, lng]);
+                  }}
+                  placeholder="e.g., 90.4125"
+                  className="mt-1 h-9 text-sm"
+                />
+              </div>
+            </div>
             <div>
-              <Label htmlFor="latitude" className="text-xs">Latitude</Label>
+              <Label htmlFor="location_name" className="text-xs">
+                Location Name / Address
+              </Label>
               <Input
-                id="latitude"
-                type="number"
-                step="any"
-                value={latitude}
-                onChange={(e) => {
-                  setLatitude(e.target.value);
-                  const lat = parseFloat(e.target.value);
-                  const lng = parseFloat(longitude);
-                  if (!isNaN(lat) && !isNaN(lng)) setMapCenter([lat, lng]);
-                }}
-                placeholder="e.g., 23.8103"
+                id="location_name"
+                value={form.location_name}
+                onChange={(e) => handleChange("location_name", e.target.value)}
+                placeholder="Enter store address or location name"
                 className="mt-1 h-9 text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="longitude" className="text-xs">Longitude</Label>
-              <Input
-                id="longitude"
-                type="number"
-                step="any"
-                value={longitude}
-                onChange={(e) => {
-                  setLongitude(e.target.value);
-                  const lat = parseFloat(latitude);
-                  const lng = parseFloat(e.target.value);
-                  if (!isNaN(lat) && !isNaN(lng)) setMapCenter([lat, lng]);
-                }}
-                placeholder="e.g., 90.4125"
-                className="mt-1 h-9 text-sm"
-              />
+              <Label className="text-xs text-muted-foreground">Click on the map to set location</Label>
+              <div className="mt-1 rounded-xl overflow-hidden border border-border h-[200px]">
+                <MapContainer
+                  center={mapCenter}
+                  zoom={13}
+                  className="w-full h-full"
+                  style={{ height: "200px", width: "100%" }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <MapClickHandler onMapClick={handleMapClick} />
+                  <MapRecenter lat={mapCenter[0]} lng={mapCenter[1]} />
+                  {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
+                    <Marker position={[parseFloat(latitude), parseFloat(longitude)]} />
+                  )}
+                </MapContainer>
+              </div>
             </div>
           </div>
           <div>
-            <Label htmlFor="location_name" className="text-xs">Location Name / Address</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="location_name"
-              value={form.location_name}
-              onChange={(e) => handleChange("location_name", e.target.value)}
-              placeholder="Enter store address or location name"
-              className="mt-1 h-9 text-sm"
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={(e) => handleChange("email", e.target.value)}
+              placeholder="store@example.com"
+              className="mt-1"
             />
           </div>
           <div>
-            <Label className="text-xs text-muted-foreground">Click on the map to set location</Label>
-            <div className="mt-1 rounded-xl overflow-hidden border border-border h-[200px]">
-              <MapContainer
-                center={mapCenter}
-                zoom={13}
-                className="w-full h-full"
-                style={{ height: "200px", width: "100%" }}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <MapClickHandler onMapClick={handleMapClick} />
-                <MapRecenter lat={mapCenter[0]} lng={mapCenter[1]} />
-                {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
-                  <Marker position={[parseFloat(latitude), parseFloat(longitude)]} />
-                )}
-              </MapContainer>
-            </div>
-          </div>
-        </div>
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="store@example.com" className="mt-1" />
-          </div>
-          <div>
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={form.phone} onChange={(e) => handleChange("phone", e.target.value)} placeholder="+1234567890" className="mt-1" />
+            <Input
+              id="phone"
+              value={form.phone}
+              onChange={(e) => handleChange("phone", e.target.value)}
+              placeholder="+1234567890"
+              className="mt-1"
+            />
           </div>
           <div>
             <Label htmlFor="website">Website</Label>
-            <Input id="website" value={form.website} onChange={(e) => handleChange("website", e.target.value)} placeholder="https://yoursite.com" className="mt-1" />
+            <Input
+              id="website"
+              value={form.website}
+              onChange={(e) => handleChange("website", e.target.value)}
+              placeholder="https://yoursite.com"
+              className="mt-1"
+            />
           </div>
-        </div>
-
-        {/* Categories */}
-        <div className="relative">
-          <Label>Categories *</Label>
-          <button
-            type="button"
-            onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-            className="mt-1 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <span className={selectedCategories.length ? "text-foreground" : "text-muted-foreground"}>
-              {selectedCategories.length
-                ? categories.filter((c) => selectedCategories.includes(c.id)).map((c) => c.name).join(", ")
-                : "Select categories"}
-            </span>
-            <svg className={`w-4 h-4 text-muted-foreground transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          {categoryDropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
-              {categories.length > 0 ? categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => toggleCategory(cat.id)}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors"
-                >
-                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                    selectedCategories.includes(cat.id) ? "bg-primary border-primary" : "border-input"
-                  }`}>
-                    {selectedCategories.includes(cat.id) && (
-                      <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                    )}
-                  </div>
-                  {cat.name}
-                </button>
-              )) : (
-                <p className="px-3 py-2 text-sm text-muted-foreground">Loading...</p>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Business Hours */}
@@ -495,7 +547,9 @@ const CreateStore = () => {
                     className="h-9 rounded-md border border-input bg-background px-2 text-sm min-w-[100px]"
                   >
                     {SOCIAL_TYPES.map((t) => (
-                      <option key={t} value={t}>{t}</option>
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
                     ))}
                   </select>
                   <Input
