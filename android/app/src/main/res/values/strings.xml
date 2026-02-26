@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Discount Panel</string>
+    <string name="title_activity_main">Discount Panel</string>
+    <string name="package_name">app.lovable.ab563e9b0fc04ae58cb7243ca4ee46f2</string>
+    <string name="custom_url_scheme">app.lovable.ab563e9b0fc04ae58cb7243ca4ee46f2</string>
+</resources>
