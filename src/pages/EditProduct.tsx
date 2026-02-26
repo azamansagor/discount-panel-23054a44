@@ -224,8 +224,9 @@ const EditProduct = () => {
         if (discount.discount_end_date) body.discount_end_date = discount.discount_end_date;
       }
 
-      // Always use FormData to support file uploads
+      // Use FormData with _method spoofing for Laravel compatibility
       const formData = new FormData();
+      formData.append("_method", "PUT");
       Object.entries(body).forEach(([key, value]) => {
         if (key === 'specifications' && Array.isArray(value)) {
           value.forEach((spec: { key: string; value: string }, i: number) => {
@@ -242,7 +243,7 @@ const EditProduct = () => {
       galleryImages.forEach((file) => formData.append("gallery_images[]", file));
 
       const response = await fetch(`${API_BASE_URL}/user/store/products`, {
-        method: "PUT",
+        method: "POST",
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${user?.token}`,
