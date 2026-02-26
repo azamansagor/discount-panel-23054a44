@@ -241,10 +241,7 @@ const EditStore = () => {
 
       const validSocials = socialContacts.filter((s) => s.value.trim());
       if (validSocials.length) {
-        validSocials.forEach((s, i) => {
-          formData.append(`social_contacts[${i}][type]`, s.type);
-          formData.append(`social_contacts[${i}][value]`, s.value);
-        });
+        formData.append('social_contacts', JSON.stringify(validSocials.map(s => ({ type: s.type, value: s.value }))));
       }
 
       const response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
