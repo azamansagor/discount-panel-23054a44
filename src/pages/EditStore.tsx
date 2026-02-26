@@ -212,43 +212,73 @@ const EditStore = () => {
 
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("_method", "PUT");
-      Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
-      if (latitude) formData.append("latitude", latitude);
-      if (longitude) formData.append("longitude", longitude);
-      if (bannerImage) formData.append("banner_image", bannerImage);
-
-      for (const img of galleryImages) {
-        if (img.size > 2048 * 1024) {
-          toast({ title: `Image "${img.name}" exceeds 2MB limit.`, variant: "destructive" });
-          setIsSubmitting(false);
-          return;
-        }
-        formData.append("gallery_images[]", img);
-      }
-
-      selectedCategories.forEach((id) => formData.append("category_ids[]", id.toString()));
+      const hasFiles = !!bannerImage || galleryImages.length > 0;
+      const validSocials = socialContacts.filter((s) => s.value.trim());
 
       const hasHours = Object.values(businessHours).some((h) => h.open || h.close);
+      const businessHoursData: Record<string, any> = {};
       if (hasHours) {
         Object.entries(businessHours).forEach(([day, h]) => {
           if (h.open || h.close) {
-            formData.append(`business_hours[${day}][open]`, h.open || "");
-            formData.append(`business_hours[${day}][close]`, h.close || "");
+            businessHoursData[day] = { open: h.open || "", close: h.close || "" };
           }
         });
       }
 
-      const validSocials = socialContacts.filter((s) => s.value.trim());
-      formData.append('social_contacts', JSON.stringify(validSocials.map(s => ({ type: s.type, value: s.value }))));
+      let response: Response;
 
+      if (hasFiles) {
+        // Use FormData when files need uploading
+        const formData = new FormData();
+        formData.append("_method", "PUT");
+        Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
+        if (latitude) formData.append("latitude", latitude);
+        if (longitude) formData.append("longitude", longitude);
+        if (bannerImage) formData.append("banner_image", bannerImage);
+        for (const img of galleryImages) {
+          if (img.size > 2048 * 1024) {
+            toast({ title: `Image "${img.name}" exceeds 2MB limit.`, variant: "destructive" });
+            setIsSubmitting(false);
+            return;
+          }
+          formData.append("gallery_images[]", img);
+        }
+        selectedCategories.forEach((id) => formData.append("category_ids[]", id.toString()));
+        if (hasHours) {
+          Object.entries(businessHoursData).forEach(([day, h]) => {
+            formData.append(`business_hours[${day}][open]`, h.open);
+            formData.append(`business_hours[${day}][close]`, h.close);
+          });
+        }
+        validSocials.forEach((s, i) => {
+          formData.append(`social_contacts[${i}][type]`, s.type);
+          formData.append(`social_contacts[${i}][value]`, s.value);
+        });
+        response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
+          method: "POST",
+          headers: { Accept: "application/json", Authorization: `Bearer ${user?.token}` },
+          body: formData,
+        });
+      } else {
+        // Use JSON when no files — ensures arrays are sent properly
+        const jsonBody: Record<string, any> = { ...form };
+        if (latitude) jsonBody.latitude = latitude;
+        if (longitude) jsonBody.longitude = longitude;
+        jsonBody.category_ids = selectedCategories;
+        if (hasHours) jsonBody.business_hours = businessHoursData;
+        jsonBody.social_contacts = validSocials.map(s => ({ type: s.type, value: s.value }));
 
-      const response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
-        method: "POST",
-        headers: { Accept: "application/json", Authorization: `Bearer ${user?.token}` },
-        body: formData,
-      });
+        response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${user?.token}`,
+          },
+          body: JSON.stringify(jsonBody),
+        });
+      }
+
       const data = await response.json();
       if (response.ok && data.success) {
         toast({ title: "Store updated successfully!" });
