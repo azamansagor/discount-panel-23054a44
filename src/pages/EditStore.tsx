@@ -241,12 +241,19 @@ const EditStore = () => {
       }
 
       const validSocials = socialContacts.filter((s) => s.value.trim());
-      validSocials.forEach((s, i) => {
-        formData.append(`social_contacts[${i}][type]`, s.type);
-        formData.append(`social_contacts[${i}][value]`, s.value);
-      });
-      if (!validSocials.length) {
-        formData.append('social_contacts', '[]');
+      if (validSocials.length) {
+        validSocials.forEach((s, i) => {
+          formData.append(`social_contacts[${i}][type]`, s.type);
+          formData.append(`social_contacts[${i}][value]`, s.value);
+        });
+      } else {
+        formData.append('social_contacts[]', '');
+      }
+
+      // Debug: log FormData entries
+      console.log('FormData social_contacts entries:');
+      for (const [key, value] of formData.entries()) {
+        if (key.includes('social')) console.log(key, '=', value);
       }
 
       const response = await fetch(`${API_BASE_URL}/user/stores/${storeId}`, {
