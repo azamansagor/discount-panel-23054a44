@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
 import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
 interface FeaturedProduct {
@@ -35,73 +34,93 @@ const ImageSlider = () => {
     fetchFeatured();
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(products.length / 2));
+  const total = products.length;
 
   // Auto-slide
   useEffect(() => {
-    if (totalPages <= 1) return;
+    if (total <= 1) return;
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % totalPages);
+      setCurrentIndex((prev) => (prev + 1) % total);
     }, 4000);
     return () => clearInterval(interval);
-  }, [totalPages]);
+  }, [total]);
 
   if (loading) {
     return (
       <div className="px-4 pt-3">
-        <div className="flex gap-2.5">
-          <div className="w-[48%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
-          <div className="w-[48%] h-36 bg-secondary rounded-2xl animate-pulse flex-shrink-0" />
+        <div className="flex gap-2 items-center justify-center">
+          <div className="w-[22%] h-24 bg-secondary rounded-2xl animate-pulse" />
+          <div className="w-[50%] h-36 bg-secondary rounded-2xl animate-pulse" />
+          <div className="w-[22%] h-24 bg-secondary rounded-2xl animate-pulse" />
         </div>
       </div>
     );
   }
 
-  if (products.length === 0) return null;
+  if (total === 0) return null;
+
+  const getIndex = (offset: number) => ((currentIndex + offset) % total + total) % total;
+  const leftProduct = products[getIndex(-1)];
+  const centerProduct = products[getIndex(0)];
+  const rightProduct = products[getIndex(1)];
+
+  const slides = [
+    { product: leftProduct, position: "left" as const },
+    { product: centerProduct, position: "center" as const },
+    { product: rightProduct, position: "right" as const },
+  ];
 
   return (
     <div className="px-4 pt-3">
-      <div className="overflow-hidden rounded-2xl">
-        <motion.div
-          className="flex"
-          animate={{ x: `-${currentIndex * 100}%` }}
-          transition={{ type: "spring", stiffness: 200, damping: 30 }}
-        >
-          {Array.from({ length: totalPages }).map((_, pageIdx) => {
-            const pair = products.slice(pageIdx * 2, pageIdx * 2 + 2);
-            return (
-              <div key={pageIdx} className="flex gap-2.5 w-full flex-shrink-0">
-                {pair.map((product) => (
-                  <div
-                    key={product.id}
-                    className="w-[calc(50%-5px)] flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer"
-                    onClick={() => navigate(`/product/${product.id}`)}
-                  >
-                    <img
-                      src={product.featured_image && product.featured_image.trim() !== "" ? product.featured_image : "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-full h-36 object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/placeholder.svg";
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            );
-          })}
-        </motion.div>
+      <div className="flex items-center justify-center gap-2 overflow-hidden">
+        {slides.map(({ product, position }) => {
+          const isCenter = position === "center";
+          return (
+            <motion.div
+              key={`${position}-${product.id}`}
+              layout
+              className={`rounded-2xl overflow-hidden cursor-pointer flex-shrink-0 ${
+                isCenter ? "w-[54%] h-36 shadow-lg z-10" : "w-[21%] h-24 opacity-70"
+              }`}
+              onClick={() => {
+                if (isCenter) {
+                  navigate(`/product/${product.id}`);
+                } else {
+                  setCurrentIndex(
+                    position === "left" ? getIndex(-1) : getIndex(1)
+                  );
+                }
+              }}
+              transition={{ type: "spring", stiffness: 250, damping: 28 }}
+            >
+              <img
+                src={
+                  product.featured_image && product.featured_image.trim() !== ""
+                    ? product.featured_image
+                    : "/placeholder.svg"
+                }
+                alt={product.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/placeholder.svg";
+                }}
+              />
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Dots */}
-      {totalPages > 1 && (
+      {total > 1 && (
         <div className="flex justify-center gap-1.5 mt-3">
-          {Array.from({ length: totalPages }).map((_, i) => (
+          {products.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentIndex(i)}
               className={`h-1.5 rounded-full transition-all duration-300 ${
-                i === currentIndex ? "w-5 bg-primary" : "w-1.5 bg-muted-foreground/30"
+                i === currentIndex
+                  ? "w-5 bg-primary"
+                  : "w-1.5 bg-muted-foreground/30"
               }`}
             />
           ))}
