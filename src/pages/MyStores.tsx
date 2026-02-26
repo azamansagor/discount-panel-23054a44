@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Store, MapPin, Loader2, Pencil, Trash2 } from "lucide-react";
@@ -34,38 +34,67 @@ const MyStores = () => {
   const { toast } = useToast();
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [deleteStoreId, setDeleteStoreId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
-    fetchStores();
+    fetchStores(1);
   }, [isAuthenticated]);
 
-  const fetchStores = async () => {
-    setIsLoading(true);
+  const fetchStores = async (pageNum: number) => {
+    if (pageNum === 1) setIsLoading(true);
+    else setIsLoadingMore(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/user/stores`, {
+      const response = await fetch(`${API_BASE_URL}/user/stores?page=${pageNum}&per_page=15`, {
         headers: {
           Accept: "application/json",
           Authorization: `Bearer ${user?.token}`,
         },
       });
       const data = await response.json();
+      let newStores: StoreItem[] = [];
       if (data.success && data.data) {
-        setStores(Array.isArray(data.data) ? data.data : data.data.data || []);
+        const d = data.data;
+        newStores = Array.isArray(d) ? d : d.data || [];
+        const lastPage = d.last_page || d.meta?.last_page;
+        if (lastPage) setHasMore(pageNum < lastPage);
+        else setHasMore(newStores.length >= 15);
       } else if (data.stores) {
-        setStores(data.stores);
+        newStores = data.stores;
+        setHasMore(false);
       }
+      setStores((prev) => (pageNum === 1 ? newStores : [...prev, ...newStores]));
+      setPage(pageNum);
     } catch {
       console.error("Failed to fetch stores");
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
+
+  const lastElementRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isLoadingMore) return;
+      if (observerRef.current) observerRef.current.disconnect();
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          fetchStores(page + 1);
+        }
+      });
+      if (node) observerRef.current.observe(node);
+    },
+    [isLoadingMore, hasMore, page]
+  );
 
   const handleDelete = async () => {
     if (!deleteStoreId) return;
@@ -173,6 +202,12 @@ const MyStores = () => {
                 </div>
               </motion.div>
             ))}
+            <div ref={lastElementRef} className="h-1" />
+            {isLoadingMore && (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              </div>
+            )}
           </div>
         )}
       </div>
