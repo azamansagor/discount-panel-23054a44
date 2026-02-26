@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL as API_ROOT } from "@/lib/api";
 
@@ -14,6 +14,8 @@ const ImageSlider = () => {
   const [products, setProducts] = useState<FeaturedProduct[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const dragStartX = useRef(0);
+  const isDragging = useRef(false);
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -45,6 +47,22 @@ const ImageSlider = () => {
     return () => clearInterval(interval);
   }, [total]);
 
+  const handleDragEnd = useCallback(
+    (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+      if (total <= 1) return;
+      const threshold = 50;
+      const swipe = info.offset.x;
+      const velocity = info.velocity.x;
+
+      if (swipe < -threshold || velocity < -500) {
+        setCurrentIndex((prev) => (prev + 1) % total);
+      } else if (swipe > threshold || velocity > 500) {
+        setCurrentIndex((prev) => ((prev - 1) + total) % total);
+      }
+    },
+    [total]
+  );
+
   if (loading) {
     return (
       <div className="px-4 pt-3">
@@ -72,14 +90,20 @@ const ImageSlider = () => {
 
   return (
     <div className="px-4 pt-3">
-      <div className="flex items-center justify-center gap-2 overflow-hidden">
+      <motion.div
+        className="flex items-center justify-center gap-2 overflow-hidden cursor-grab active:cursor-grabbing"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.3}
+        onDragEnd={handleDragEnd}
+      >
         {slides.map(({ product, position }) => {
           const isCenter = position === "center";
           return (
             <motion.div
               key={`${position}-${product.id}`}
               layout
-              className={`rounded-2xl overflow-hidden cursor-pointer flex-shrink-0 ${
+              className={`rounded-2xl overflow-hidden flex-shrink-0 pointer-events-auto ${
                 isCenter ? "w-[45%] h-28 shadow-lg z-10" : "w-[25%] h-24 opacity-70"
               }`}
               onClick={() => {
@@ -100,7 +124,8 @@ const ImageSlider = () => {
                     : "/placeholder.svg"
                 }
                 alt={product.name}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover pointer-events-none"
+                draggable={false}
                 onError={(e) => {
                   e.currentTarget.src = "/placeholder.svg";
                 }}
@@ -108,7 +133,7 @@ const ImageSlider = () => {
             </motion.div>
           );
         })}
-      </div>
+      </motion.div>
 
       {/* Dots */}
       {total > 1 && (
