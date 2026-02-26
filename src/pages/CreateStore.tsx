@@ -1,12 +1,44 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Upload, Plus, X, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Plus, X, Clock, MapPin, Navigation } from "lucide-react";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { API_BASE_URL } from "@/lib/api";
+
+// Fix default marker icon
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+// Component to handle map click events
+const MapClickHandler = ({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) => {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+};
+
+// Component to recenter the map
+const MapRecenter = ({ lat, lng }: { lat: number; lng: number }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (lat && lng) {
+      map.setView([lat, lng], 15);
+    }
+  }, [lat, lng, map]);
+  return null;
+};
 
 interface Category {
   id: number;
@@ -31,10 +63,13 @@ const CreateStore = () => {
     phone: "",
     website: "",
   });
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-  const [galleryImages, setGalleryImages] = useState<File[]>([]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([23.8103, 90.4125]); // Default Dhaka
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [galleryImages, setGalleryImages] = useState<File[]>([]);
   const [businessHours, setBusinessHours] = useState<Record<string, { open: string; close: string }>>(
     Object.fromEntries(DAYS.map((d) => [d, { open: "", close: "" }]))
   );
@@ -107,6 +142,34 @@ const CreateStore = () => {
     setBusinessHours((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
   };
 
+  const handleMapClick = useCallback(async (lat: number, lng: number) => {
+    setLatitude(lat.toFixed(6));
+    setLongitude(lng.toFixed(6));
+    setMapCenter([lat, lng]);
+    // Reverse geocode to get location name
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=16`
+      );
+      const data = await res.json();
+      if (data.display_name) {
+        handleChange("location_name", data.display_name.split(",").slice(0, 3).join(",").trim());
+      }
+    } catch {}
+  }, []);
+
+  const useMyLocation = useCallback(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        handleMapClick(lat, lng);
+      },
+      () => toast({ title: "Could not get your location", variant: "destructive" }),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [handleMapClick, toast]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -121,6 +184,8 @@ const CreateStore = () => {
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v) formData.append(k, v); });
+      if (latitude) formData.append("latitude", latitude);
+      if (longitude) formData.append("longitude", longitude);
       if (bannerImage) formData.append("banner_image", bannerImage);
       galleryImages.forEach((img) => formData.append("gallery_images[]", img));
       selectedCategories.forEach((id) => formData.append("category_ids[]", id.toString()));
@@ -235,10 +300,88 @@ const CreateStore = () => {
               className="mt-1 flex w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px]"
             />
           </div>
-          <div>
-            <Label htmlFor="location_name">Location</Label>
-            <Input id="location_name" value={form.location_name} onChange={(e) => handleChange("location_name", e.target.value)} placeholder="City or area" className="mt-1" />
+        {/* Store Location Section */}
+        <div className="space-y-3 p-4 bg-card rounded-xl border border-border/50">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <MapPin className="w-4 h-4" /> Store Location
+            </span>
+            <button
+              type="button"
+              onClick={useMyLocation}
+              className="flex items-center gap-1 text-xs text-primary font-medium"
+            >
+              <Navigation className="w-3 h-3" /> Use My Location
+            </button>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="latitude" className="text-xs">Latitude</Label>
+              <Input
+                id="latitude"
+                type="number"
+                step="any"
+                value={latitude}
+                onChange={(e) => {
+                  setLatitude(e.target.value);
+                  const lat = parseFloat(e.target.value);
+                  const lng = parseFloat(longitude);
+                  if (!isNaN(lat) && !isNaN(lng)) setMapCenter([lat, lng]);
+                }}
+                placeholder="e.g., 23.8103"
+                className="mt-1 h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label htmlFor="longitude" className="text-xs">Longitude</Label>
+              <Input
+                id="longitude"
+                type="number"
+                step="any"
+                value={longitude}
+                onChange={(e) => {
+                  setLongitude(e.target.value);
+                  const lat = parseFloat(latitude);
+                  const lng = parseFloat(e.target.value);
+                  if (!isNaN(lat) && !isNaN(lng)) setMapCenter([lat, lng]);
+                }}
+                placeholder="e.g., 90.4125"
+                className="mt-1 h-9 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="location_name" className="text-xs">Location Name / Address</Label>
+            <Input
+              id="location_name"
+              value={form.location_name}
+              onChange={(e) => handleChange("location_name", e.target.value)}
+              placeholder="Enter store address or location name"
+              className="mt-1 h-9 text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Click on the map to set location</Label>
+            <div className="mt-1 rounded-xl overflow-hidden border border-border h-[200px]">
+              <MapContainer
+                center={mapCenter}
+                zoom={13}
+                className="w-full h-full"
+                style={{ height: "200px", width: "100%" }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <MapClickHandler onMapClick={handleMapClick} />
+                <MapRecenter lat={mapCenter[0]} lng={mapCenter[1]} />
+                {latitude && longitude && !isNaN(parseFloat(latitude)) && !isNaN(parseFloat(longitude)) && (
+                  <Marker position={[parseFloat(latitude), parseFloat(longitude)]} />
+                )}
+              </MapContainer>
+            </div>
+          </div>
+        </div>
           <div>
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" value={form.email} onChange={(e) => handleChange("email", e.target.value)} placeholder="store@example.com" className="mt-1" />
