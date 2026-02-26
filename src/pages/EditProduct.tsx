@@ -96,10 +96,15 @@ const EditProduct = () => {
       const data = await response.json();
       const product = data.data || data.product || data;
 
+      const stripHtml = (html: string) => {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        return doc.body.textContent || "";
+      };
+
       setForm({
         name: product.name || "",
-        description: product.description || "",
-        short_description: product.short_description || "",
+        description: stripHtml(product.description || ""),
+        short_description: stripHtml(product.short_description || ""),
         price: product.price?.toString() || "",
         affiliate_link: product.affiliate_link || "",
         delivery_radius: product.delivery_radius?.toString() || "",
