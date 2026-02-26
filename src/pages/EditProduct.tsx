@@ -26,6 +26,9 @@ const EditProduct = () => {
   const [featuredImage, setFeaturedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [existingImage, setExistingImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [existingGallery, setExistingGallery] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     name: "",
@@ -121,6 +124,10 @@ const EditProduct = () => {
       } else if (product.category_ids?.length) {
         setSelectedCategories(product.category_ids);
       }
+      if (product.gallery_images?.length) {
+        setExistingGallery(product.gallery_images);
+        setGalleryPreviews(product.gallery_images);
+      }
       if (product.discounts?.length) {
         const d = product.discounts[0];
         setDiscountEnabled(true);
@@ -149,6 +156,25 @@ const EditProduct = () => {
       setFeaturedImage(file);
       setImagePreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleGalleryImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) {
+      setGalleryImages((prev) => [...prev, ...files]);
+      setGalleryPreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))]);
+    }
+  };
+
+  const removeGalleryImage = (index: number) => {
+    const isExisting = index < existingGallery.length;
+    if (isExisting) {
+      setExistingGallery((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      const newIndex = index - existingGallery.length;
+      setGalleryImages((prev) => prev.filter((_, i) => i !== newIndex));
+    }
+    setGalleryPreviews((prev) => prev.filter((_, i) => i !== index));
   };
 
   const toggleCategory = (id: number) => {
@@ -187,39 +213,26 @@ const EditProduct = () => {
         if (discount.discount_end_date) body.discount_end_date = discount.discount_end_date;
       }
 
-      // Handle image upload separately if needed
-      let fetchOptions: RequestInit;
-      if (featuredImage) {
-        const formData = new FormData();
-        Object.entries(body).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            value.forEach((v) => formData.append(`${key}[]`, v.toString()));
-          } else {
-            formData.append(key, String(value));
-          }
-        });
-        formData.append("featured_image", featuredImage);
-        fetchOptions = {
-          method: "PUT",
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${user?.token}`,
-          },
-          body: formData,
-        };
-      } else {
-        fetchOptions = {
-          method: "PUT",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user?.token}`,
-          },
-          body: JSON.stringify(body),
-        };
-      }
+      // Always use FormData to support file uploads
+      const formData = new FormData();
+      Object.entries(body).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(`${key}[]`, v.toString()));
+        } else {
+          formData.append(key, String(value));
+        }
+      });
+      if (featuredImage) formData.append("featured_image", featuredImage);
+      galleryImages.forEach((file) => formData.append("gallery_images[]", file));
 
-      const response = await fetch(`${API_BASE_URL}/user/store/products`, fetchOptions);
+      const response = await fetch(`${API_BASE_URL}/user/store/products`, {
+        method: "PUT",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${user?.token}`,
+        },
+        body: formData,
+      });
       const data = await response.json();
       if (response.ok && (data.success || data.product || data.data)) {
         toast({ title: "Product updated successfully!" });
@@ -274,7 +287,30 @@ const EditProduct = () => {
           </label>
         </div>
 
-        {/* Fields */}
+        {/* Gallery Images */}
+        <div>
+          <Label>Gallery Images</Label>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {galleryPreviews.map((src, i) => (
+              <div key={i} className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
+                <img src={src} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeGalleryImage(i)}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center text-xs"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            <label className="w-20 h-20 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors">
+              <Upload className="w-5 h-5 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">Add</span>
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryImages} />
+            </label>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Product Name *</Label>
