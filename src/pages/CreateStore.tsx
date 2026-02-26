@@ -186,20 +186,25 @@ const CreateStore = () => {
       if (latitude) formData.append("latitude", latitude);
       if (longitude) formData.append("longitude", longitude);
       if (bannerImage) formData.append("banner_image", bannerImage);
-      galleryImages.forEach((img) => formData.append("gallery_images[]", img));
+      for (const img of galleryImages) {
+        if (img.size > 2048 * 1024) {
+          toast({ title: `Image "${img.name}" exceeds 2MB limit. Please use a smaller file.`, variant: "destructive" });
+          setIsSubmitting(false);
+          return;
+        }
+        formData.append("gallery_images[]", img);
+      }
       selectedCategories.forEach((id) => formData.append("category_ids[]", id.toString()));
 
-      // Business hours
+      // Business hours - send as array format expected by API
       const hasHours = Object.values(businessHours).some((h) => h.open || h.close);
       if (hasHours) {
-        formData.append(
-          "business_hours",
-          JSON.stringify(
-            Object.fromEntries(
-              Object.entries(businessHours).map(([day, h]) => [day, { open: h.open || null, close: h.close || null }]),
-            ),
-          ),
-        );
+        Object.entries(businessHours).forEach(([day, h]) => {
+          if (h.open || h.close) {
+            formData.append(`business_hours[${day}][open]`, h.open || "");
+            formData.append(`business_hours[${day}][close]`, h.close || "");
+          }
+        });
       }
 
       // Social contacts
