@@ -165,36 +165,61 @@ const EditProduct = () => {
     }
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      formData.append("_method", "PUT");
-      formData.append("store_id", storeId || "");
-      formData.append("name", form.name);
-      formData.append("description", form.description);
-      if (form.short_description) formData.append("short_description", form.short_description);
-      formData.append("price", form.price);
-      if (form.affiliate_link) formData.append("affiliate_link", form.affiliate_link);
-      formData.append("is_anywhere_delivery", isAnywhereDelivery ? "1" : "0");
-      if (!isAnywhereDelivery && form.delivery_radius) formData.append("delivery_radius", form.delivery_radius);
-      if (featuredImage) formData.append("featured_image", featuredImage);
-      selectedCategories.forEach((id) => formData.append("category_ids[]", id.toString()));
+      const body: Record<string, any> = {
+        store_id: Number(storeId),
+        product_id: Number(productId),
+        name: form.name,
+        description: form.description,
+        price: Number(form.price),
+        is_anywhere_delivery: isAnywhereDelivery ? 1 : 0,
+      };
+      if (form.short_description) body.short_description = form.short_description;
+      if (form.affiliate_link) body.affiliate_link = form.affiliate_link;
+      if (!isAnywhereDelivery && form.delivery_radius) body.delivery_radius = Number(form.delivery_radius);
+      if (selectedCategories.length) body.category_ids = selectedCategories;
 
       if (discountEnabled) {
-        formData.append("discount_enabled", "1");
-        formData.append("discount_title", discount.discount_title);
-        formData.append("discount_type", discount.discount_type);
-        formData.append("discount_amount", discount.discount_amount);
-        if (discount.discount_start_date) formData.append("discount_start_date", discount.discount_start_date);
-        if (discount.discount_end_date) formData.append("discount_end_date", discount.discount_end_date);
+        body.discount_enabled = 1;
+        body.discount_title = discount.discount_title;
+        body.discount_type = discount.discount_type;
+        body.discount_amount = Number(discount.discount_amount);
+        if (discount.discount_start_date) body.discount_start_date = discount.discount_start_date;
+        if (discount.discount_end_date) body.discount_end_date = discount.discount_end_date;
       }
 
-      const response = await fetch(`${API_BASE_URL}/user/products/${productId}`, {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${user?.token}`,
-        },
-        body: formData,
-      });
+      // Handle image upload separately if needed
+      let fetchOptions: RequestInit;
+      if (featuredImage) {
+        const formData = new FormData();
+        Object.entries(body).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            value.forEach((v) => formData.append(`${key}[]`, v.toString()));
+          } else {
+            formData.append(key, String(value));
+          }
+        });
+        formData.append("featured_image", featuredImage);
+        fetchOptions = {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${user?.token}`,
+          },
+          body: formData,
+        };
+      } else {
+        fetchOptions = {
+          method: "PUT",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user?.token}`,
+          },
+          body: JSON.stringify(body),
+        };
+      }
+
+      const response = await fetch(`${API_BASE_URL}/user/store/products`, fetchOptions);
       const data = await response.json();
       if (response.ok && (data.success || data.product || data.data)) {
         toast({ title: "Product updated successfully!" });
