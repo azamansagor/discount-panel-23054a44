@@ -113,7 +113,7 @@ export default function StoreProducts() {
     <div className="min-h-screen bg-secondary/30 pb-24">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background">
-        <div className="flex items-center gap-3 px-4 py-4">
+        <div className="flex items-center gap-3 px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={() => navigate(-1)}

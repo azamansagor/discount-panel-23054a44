@@ -129,7 +129,7 @@ const MyStores = () => {
         animate={{ opacity: 1, y: 0 }}
         className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50"
       >
-        <div className="flex items-center justify-between px-4 py-4">
+        <div className="flex items-center justify-between px-4 py-4 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate(-1)} className="p-2 bg-secondary rounded-full">
               <ArrowLeft className="w-5 h-5 text-foreground" />
