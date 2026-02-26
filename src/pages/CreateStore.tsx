@@ -76,6 +76,7 @@ const CreateStore = () => {
   const [socialContacts, setSocialContacts] = useState<{ type: string; value: string }[]>([]);
   const [showBusinessHours, setShowBusinessHours] = useState(false);
   const [showSocials, setShowSocials] = useState(false);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -397,27 +398,42 @@ const CreateStore = () => {
         </div>
 
         {/* Categories */}
-        <div>
+        <div className="relative">
           <Label>Categories *</Label>
-          {categories.length > 0 ? (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {categories.map((cat) => (
+          <button
+            type="button"
+            onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+            className="mt-1 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className={selectedCategories.length ? "text-foreground" : "text-muted-foreground"}>
+              {selectedCategories.length
+                ? categories.filter((c) => selectedCategories.includes(c.id)).map((c) => c.name).join(", ")
+                : "Select categories"}
+            </span>
+            <svg className={`w-4 h-4 text-muted-foreground transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {categoryDropdownOpen && (
+            <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
+              {categories.length > 0 ? categories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   onClick={() => toggleCategory(cat.id)}
-                  className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                    selectedCategories.includes(cat.id)
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-secondary text-foreground border-border"
-                  }`}
+                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-popover-foreground hover:bg-accent transition-colors"
                 >
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    selectedCategories.includes(cat.id) ? "bg-primary border-primary" : "border-input"
+                  }`}>
+                    {selectedCategories.includes(cat.id) && (
+                      <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                    )}
+                  </div>
                   {cat.name}
                 </button>
-              ))}
+              )) : (
+                <p className="px-3 py-2 text-sm text-muted-foreground">Loading...</p>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground mt-1">Loading categories...</p>
           )}
         </div>
 
