@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Capacitor } from "@capacitor/core";
-import { GoogleAuth } from "@codetrix-studio/capacitor-google-auth";
+import { SocialLogin } from "@capgo/capacitor-social-login";
 
 declare global {
   interface Window {
@@ -26,12 +26,12 @@ declare global {
 
 const GOOGLE_CLIENT_ID = "981627527365-794hqties3q3ru19hbkjnrjq6p16tu3f.apps.googleusercontent.com";
 
-// Initialize GoogleAuth for native platforms
+// Initialize SocialLogin for native platforms
 if (Capacitor.isNativePlatform()) {
-  GoogleAuth.initialize({
-    clientId: GOOGLE_CLIENT_ID,
-    scopes: ["profile", "email"],
-    grantOfflineAccess: true,
+  SocialLogin.initialize({
+    google: {
+      webClientId: GOOGLE_CLIENT_ID,
+    },
   });
 }
 
@@ -49,9 +49,9 @@ const Login = () => {
     setIsGoogleLoading(true);
     try {
       if (Capacitor.isNativePlatform()) {
-        // Native: use Capacitor Google Auth plugin
-        const googleUser = await GoogleAuth.signIn();
-        const idToken = googleUser.authentication.idToken;
+        // Native: use Capacitor Social Login plugin
+        const res = await SocialLogin.login({ provider: 'google', options: {} });
+        const idToken = (res as any)?.result?.idToken;
         if (!idToken) {
           toast({ title: "Error", description: "Failed to get Google token.", variant: "destructive" });
           setIsGoogleLoading(false);
