@@ -34,7 +34,7 @@ const TutorialDetail = () => {
     if (!tutorial && tutorialId) {
       // Fetch single tutorial if navigated directly
       fetch(`${API_BASE_URL}/tutorials?per_page=50&page=1`, {
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" },
       })
         .then((r) => r.json())
         .then((data) => {

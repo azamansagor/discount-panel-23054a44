@@ -36,7 +36,7 @@ const Tutorials = () => {
     try {
       const response = await fetch(
         `${API_BASE_URL}/tutorials?per_page=10&page=${pageNum}`,
-        { headers: { Accept: "application/json" } }
+        { headers: { Accept: "application/json", "X-Requested-With": "XMLHttpRequest" } }
       );
       const data = await response.json();
       if (data.success && data.tutorials) {
