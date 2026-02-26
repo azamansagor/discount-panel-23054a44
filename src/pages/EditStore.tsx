@@ -309,7 +309,7 @@ const EditStore = () => {
         className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border/50"
       >
         <div className="flex items-center gap-3 px-4 py-4">
-          <button onClick={() => navigate(-1)} className="p-2 bg-secondary rounded-full">
+          <button onClick={() => navigate("/my-stores")} className="p-2 bg-secondary rounded-full">
             <ArrowLeft className="w-5 h-5 text-foreground" />
           </button>
           <h1 className="text-xl font-bold text-foreground">Edit Store</h1>
