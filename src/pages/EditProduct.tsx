@@ -39,6 +39,7 @@ const EditProduct = () => {
     delivery_radius: "",
   });
   const [isAnywhereDelivery, setIsAnywhereDelivery] = useState(true);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [keyFeatures, setKeyFeatures] = useState<string[]>([]);
   const [specifications, setSpecifications] = useState<{ key: string; value: string }[]>([]);
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -369,21 +370,43 @@ const EditProduct = () => {
 
         {/* Categories */}
         {categories.length > 0 && (
-          <div>
-            <Label>Category</Label>
-            <select
-              value={selectedCategories[0] || ""}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setSelectedCategories(val ? [val] : []);
-              }}
-              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          <div className="relative">
+            <Label>Categories</Label>
+            <button
+              type="button"
+              onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+              className="mt-1 flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <option value="">Select a category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+              <span className={selectedCategories.length ? "text-foreground" : "text-muted-foreground"}>
+                {selectedCategories.length
+                  ? categories.filter((c) => selectedCategories.includes(c.id)).map((c) => c.name).join(", ")
+                  : "Select categories"}
+              </span>
+              <svg className={`w-4 h-4 text-muted-foreground transition-transform ${categoryDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {categoryDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => toggleCategory(cat.id)}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-popover-foreground hover:bg-secondary transition-colors"
+                  >
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${selectedCategories.includes(cat.id) ? "bg-primary border-primary" : "border-input"}`}>
+                      {selectedCategories.includes(cat.id) && (
+                        <svg className="w-3 h-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
