@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 
 interface OnboardingSlide {
   image: string;
@@ -33,8 +33,7 @@ export const OnboardingScreen = () => {
   // Skip onboarding if already seen
   const hasSeenOnboarding = localStorage.getItem("onboarding_seen");
   if (hasSeenOnboarding) {
-    navigate("/home", { replace: true });
-    return null;
+    return <Navigate to="/home" replace />;
   }
 
   const completeOnboarding = () => {
