@@ -72,13 +72,15 @@ const EditProduct = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${API_BASE_URL}/user/stors/products/${productId}?store_id=${storeId}`,
+        `${API_BASE_URL}/user/store/products/show`,
         {
-          method: "GET",
+          method: "POST",
           headers: {
             Accept: "application/json",
+            "Content-Type": "application/json",
             Authorization: `Bearer ${user?.token}`,
           },
+          body: JSON.stringify({ store_id: Number(storeId), product_id: Number(productId) }),
         }
       );
       if (response.status === 403) {
