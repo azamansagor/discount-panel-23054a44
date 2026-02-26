@@ -1,9 +1,20 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Plus, Package, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Package, Loader2, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import TabBar from "@/components/layout/TabBar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import { API_BASE_URL } from "@/lib/api";
 
@@ -21,8 +32,11 @@ const MyProducts = () => {
   const navigate = useNavigate();
   const { storeId } = useParams();
   const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -58,6 +72,32 @@ const MyProducts = () => {
       console.error("Failed to fetch products");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteProductId) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/products/${deleteProductId}`, {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${user?.token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ title: "Product deleted successfully" });
+        setProducts((prev) => prev.filter((p) => p.id !== deleteProductId));
+      } else {
+        toast({ title: data.message || "Failed to delete product", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error. Please try again.", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteProductId(null);
     }
   };
 
@@ -111,7 +151,7 @@ const MyProducts = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             {products.map((product, index) => {
               const discounted = getDiscountedPrice(product);
               return (
@@ -120,20 +160,20 @@ const MyProducts = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
-                  className="bg-card rounded-xl border border-border/50 overflow-hidden"
+                  className="w-full flex items-center gap-3 p-3 bg-card rounded-2xl border border-border/50"
                 >
-                  <div className="aspect-square bg-muted">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted flex-shrink-0">
                     {product.featured_image ? (
                       <img src={product.featured_image} alt={product.name} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Package className="w-8 h-8 text-muted-foreground/30" />
+                        <Package className="w-6 h-6 text-muted-foreground/30" />
                       </div>
                     )}
                   </div>
-                  <div className="p-3">
-                    <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">{product.name}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
                       {discounted != null ? (
                         <>
                           <span className="text-sm font-bold text-primary">${Number(discounted).toFixed(2)}</span>
@@ -144,12 +184,44 @@ const MyProducts = () => {
                       )}
                     </div>
                   </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => navigate(`/my-stores/${storeId}/products/${product.id}/edit`)}
+                      className="p-2 rounded-full hover:bg-secondary transition-colors"
+                    >
+                      <Pencil className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => setDeleteProductId(product.id)}
+                      className="p-2 rounded-full hover:bg-destructive/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </button>
+                  </div>
                 </motion.div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={deleteProductId !== null} onOpenChange={(open) => { if (!open) setDeleteProductId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this product? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <TabBar />
     </div>
