@@ -104,8 +104,8 @@ const Discover = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
-  const suggestionsTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const suggestionsTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Get user's current location
