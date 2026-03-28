@@ -59,13 +59,15 @@ const ImageSlider = () => {
     });
   }, [products]);
 
-  // Auto-scroll with infinite loop
+  // Auto-scroll with infinite loop (paused while dragging)
   useEffect(() => {
     if (products.length <= 1 || !scrollRef.current) return;
     const container = scrollRef.current;
     const len = products.length;
 
     const interval = setInterval(() => {
+      if (isDraggingRef.current) return;
+
       currentIndexRef.current += 1;
       const idx = currentIndexRef.current;
 
@@ -74,7 +76,6 @@ const ImageSlider = () => {
         behavior: "smooth",
       });
 
-      // After smooth scroll, if we've gone past the middle set, reset silently
       setTimeout(() => {
         if (currentIndexRef.current >= len * 2) {
           currentIndexRef.current = len;
@@ -83,7 +84,18 @@ const ImageSlider = () => {
       }, 600);
     }, 4000);
 
-    return () => clearInterval(interval);
+    // Track drag state
+    const onPointerDown = () => { isDraggingRef.current = true; };
+    const onPointerUp = () => { isDraggingRef.current = false; };
+
+    container.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerup", onPointerUp);
+
+    return () => {
+      clearInterval(interval);
+      container.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
   }, [products]);
 
   // On manual scroll end, normalize position back to middle set
