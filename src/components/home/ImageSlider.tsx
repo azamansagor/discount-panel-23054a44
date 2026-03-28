@@ -14,6 +14,7 @@ const ImageSlider = () => {
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const currentIndexRef = useRef(0);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     const fetchFeatured = async () => {
