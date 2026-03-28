@@ -72,14 +72,15 @@ const ImageSlider = () => {
         className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide"
         style={{
           scrollBehavior: "smooth",
-          paddingLeft: "calc(50% - 24% + 6px)",
-          paddingRight: "calc(50% - 24% + 6px)",
+          paddingLeft: "26%",
+          paddingRight: "26%",
         }}
       >
         {products.map((product) => (
           <div
             key={product.id}
-            className="w-[48%] flex-shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer shadow-md"
+            className="flex-shrink-0 snap-center rounded-2xl overflow-hidden cursor-pointer shadow-md"
+            style={{ width: "48vw" }}
             onClick={() => navigate(`/product/${product.id}`)}
           >
             <img
