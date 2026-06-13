@@ -122,10 +122,16 @@ export const FeaturedProducts = () => {
   };
 
   useEffect(() => {
-    fetchProducts().then((data) => {
-      setProducts(data);
-      setLoading(false);
-    });
+    fetchProducts()
+      .then((data) => {
+        setProducts(data);
+      })
+      .catch((err) => {
+        console.error("FeaturedProducts fetch failed:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {

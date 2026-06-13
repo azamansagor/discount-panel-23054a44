@@ -89,10 +89,16 @@ export const NearbyStores = () => {
   };
 
   useEffect(() => {
-    fetchStores().then((data) => {
-      setStores(data);
-      setLoading(false);
-    });
+    fetchStores()
+      .then((data) => {
+        setStores(data);
+      })
+      .catch((err) => {
+        console.error("NearbyStores fetch failed:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   if (loading) {

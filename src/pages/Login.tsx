@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
@@ -24,16 +24,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = "981627527365-794hqties3q3ru19hbkjnrjq6p16tu3f.apps.googleusercontent.com";
-
-// Initialize SocialLogin for native platforms
-if (Capacitor.isNativePlatform()) {
-  SocialLogin.initialize({
-    google: {
-      webClientId: GOOGLE_CLIENT_ID,
-    },
-  });
-}
+const GOOGLE_CLIENT_ID = "352309436329-3tkdd3ljp98gcetlj17glhtrh7d64rc5.apps.googleusercontent.com";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -44,6 +35,18 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      SocialLogin.initialize({
+        google: {
+          webClientId: GOOGLE_CLIENT_ID,
+        },
+      }).catch((err) => {
+        console.error("SocialLogin.initialize failed:", err);
+      });
+    }
+  }, []);
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
