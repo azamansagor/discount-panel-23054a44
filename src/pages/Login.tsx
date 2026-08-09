@@ -24,7 +24,7 @@ declare global {
   }
 }
 
-const GOOGLE_CLIENT_ID = "352309436329-3tkdd3ljp98gcetlj17glhtrh7d64rc5.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "137897900201-7dph1obt4o62g1i7e7ad7k7eha21k45l.apps.googleusercontent.com";
 
 const Login = () => {
   const navigate = useNavigate();
